@@ -73,7 +73,7 @@ def train(rank, args):
         hyperparams["learning_rate"] = args.learning_rate
     hyperparams["learning_rate"] *= dist.get_world_size()
     if args.train_data_dict == "nuScenes_train.pkl":
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = "/home/erik/nas_drive/publicdatasets/nuscenes"
     elif args.train_data_dict == "nuScenes_mini_train.pkl":
         nusc_path = "../experiments/nuScenes/v1.0-mini"
     else:
@@ -424,10 +424,11 @@ def train(rank, args):
                         min_future_timesteps=hyperparams["prediction_horizon"],
                         min_history_timesteps=hyperparams["maximum_history_length"],
                     )
-
+                    print("Sampling worked")
                     results = ScePT_module.snapshot_predict(
                         scene, timestep, hyperparams["prediction_horizon"], 3, nusc_path
                     )
+                    print("Snapshot predict worked")
                     (
                         clique_type,
                         clique_first_timestep,
@@ -462,6 +463,7 @@ def train(rank, args):
                             clique_is_robot,
                             limits=limits,
                         )
+                        print("Visualization worked")
 
                         ax.set_title(f"{scene.name}-t: {timestep}")
 
@@ -578,8 +580,10 @@ def spmd_main(local_rank):
         + f"port = {os.environ['MASTER_PORT']} \n",
         end="",
     )
+
     train(local_rank, args)
 
 
 if __name__ == "__main__":
-    spmd_main(args.local_rank)
+    local_rank = int(os.environ['LOCAL_RANK'])
+    spmd_main(local_rank)

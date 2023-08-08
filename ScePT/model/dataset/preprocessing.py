@@ -1337,7 +1337,8 @@ def clique_collate(data):
     if len(scene_maps) > 0:
         maps = scene_maps[0].get_cropped_maps_from_scene_map_batch(
             scene_maps,
-            scene_pts=torch.Tensor(scene_pts),
+            # Change the way the tensor is created by turning it into a numpy array first: it was scene_pts=torch.Tensor(scene_pts),
+            scene_pts=torch.Tensor(np.array(scene_pts)),
             patch_size=patch_size[0],
             rotation=heading,
         )

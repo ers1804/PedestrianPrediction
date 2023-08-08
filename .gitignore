@@ -127,3 +127,23 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+processed_nuScenes_train.pkl
+processed_nuScenes_val.pkl
+experiments/processed/eth_test.pkl
+experiments/processed/eth_train.pkl
+experiments/processed/eth_val.pkl
+experiments/processed/hotel_test.pkl
+experiments/processed/hotel_train.pkl
+experiments/processed/hotel_val.pkl
+experiments/processed/nuScenes_train_val.pkl
+experiments/processed/nuScenes_train.pkl
+experiments/processed/nuScenes_val.pkl
+experiments/processed/univ_test.pkl
+experiments/processed/univ_train.pkl
+experiments/processed/univ_val.pkl
+experiments/processed/zara1_test.pkl
+experiments/processed/zara1_train.pkl
+experiments/processed/zara1_val.pkl
+experiments/processed/zara2_test.pkl
+experiments/processed/zara2_train.pkl
+experiments/processed/zara2_val.pkl

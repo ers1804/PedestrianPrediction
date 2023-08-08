@@ -14,7 +14,7 @@ from nuscenes.map_expansion import arcline_path_utils
 
 nu_path = "./devkit/python-sdk/"
 sys.path.append(nu_path)
-sys.path.append("../../ScePT")
+sys.path.append("/home/erik/ScePT/ScePT")
 from nuscenes.nuscenes import NuScenes
 from nuscenes.prediction import PredictHelper
 from nuscenes.map_expansion.map_api import NuScenesMap

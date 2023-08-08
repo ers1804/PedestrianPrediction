@@ -1,0 +1,41 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["--data=/home/erik/nas_drive/publicdatasets/nuscenes", "--version=v1.0-trainval", "--output_path=../processed", "--num_worker=10"],
+        },
+        {
+            "name": "train.py",
+            "type": "python",
+            "program": "/home/erik/scept_env/bin/torchrun",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": ["--nproc_per_node=1", 
+                    "/home/erik/ScePT/ScePT/train.py",
+                    "--train_data_dict", "nuScenes_train.pkl",
+                    "--eval_data_dict", "nuScenes_val.pkl",
+                    "--offline_scene_graph", "yes",
+                    "--preprocess_workers", "8",
+                    "--log_dir", "/home/erik/ScePT/experiments/nuScenes/models",
+                    "--train_epochs", "2",
+                    "--augment",
+                    "--conf", "/home/erik/ScePT/config/clique_nusc_config.json",
+                    "--indexing_workers=8",
+                    "--batch_size=8",
+                    "--vis_every=1",
+                    "--map_encoding",
+                    "--incl_robot_node",
+                    "--eval_every=1"],
+        },
+    ]
+}

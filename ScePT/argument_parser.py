@@ -110,7 +110,7 @@ parser.add_argument('--no_edge_encoding',
 parser.add_argument("--data_dir",
                     help="what dir to look in for data",
                     type=str,
-                    default='../experiments/processed')
+                    default='/home/erik/ScePT/experiments/processed')
 
 parser.add_argument("--train_data_dict",
                     help="what file to load for training data",

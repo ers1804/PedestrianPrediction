@@ -5,7 +5,7 @@ import pandas as pd
 import dill
 from tqdm import tqdm
 
-sys.path.append("../../ScePT")
+sys.path.append("/home/erik/ScePT/ScePT")
 from environment import Environment, Scene, Node
 from utils import maybe_makedirs
 from environment import derivative_of
