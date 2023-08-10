@@ -190,7 +190,7 @@ def train(rank, args):
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=0,
+        num_workers=6,
     )
     train_sampler = data.distributed.DistributedSampler(
         train_data, num_replicas=dist.get_world_size(), rank=rank
@@ -255,7 +255,7 @@ def train(rank, args):
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=0,
+        num_workers=6,
     )
     eval_sampler = data.distributed.DistributedSampler(
         eval_data, num_replicas=dist.get_world_size(), rank=rank
