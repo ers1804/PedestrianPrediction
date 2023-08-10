@@ -147,3 +147,6 @@ experiments/processed/zara1_val.pkl
 experiments/processed/zara2_test.pkl
 experiments/processed/zara2_train.pkl
 experiments/processed/zara2_val.pkl
+
+# Add the folder experiments/nuscenes/models to gitignore
+experiments/nuScenes/models/
