@@ -240,7 +240,7 @@ def create_batched_meshgrid(
     bs = x_min.shape[0]
     batched_grid_i_list = list()
     for i in range(bs):
-        batched_grid_i_list.append(torch.stack(torch.meshgrid([xs[i], ys[i]])).transpose(1, 2))  # 2xHxW
+        batched_grid_i_list.append(torch.stack(torch.meshgrid([xs[i], ys[i]], indexing='ij')).transpose(1, 2))  # 2xHxW
     batched_grid: torch.Tensor = torch.stack(batched_grid_i_list, dim=0)
     return batched_grid.permute(0, 2, 3, 1)  # BxHxWx2
 
