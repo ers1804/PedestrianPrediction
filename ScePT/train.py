@@ -73,7 +73,7 @@ def train(rank, args):
         hyperparams["learning_rate"] = args.learning_rate
     hyperparams["learning_rate"] *= dist.get_world_size()
     if args.train_data_dict == "nuScenes_train.pkl":
-        nusc_path = "/home/erik/nas_drive/publicdatasets/nuscenes"
+        nusc_path = "/home/erik/NAS/publicdatasets/nuscenes"
     elif args.train_data_dict == "nuScenes_mini_train.pkl":
         nusc_path = "../experiments/nuScenes/v1.0-mini"
     else:
@@ -186,11 +186,11 @@ def train(rank, args):
     train_data_loader = DataLoader(
         train_data,
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=False,
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=6,
+        num_workers=0,
     )
     train_sampler = data.distributed.DistributedSampler(
         train_data, num_replicas=dist.get_world_size(), rank=rank
@@ -251,11 +251,11 @@ def train(rank, args):
     eval_data_loader = DataLoader(
         eval_data,
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=False,
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=6,
+        num_workers=0,
     )
     eval_sampler = data.distributed.DistributedSampler(
         eval_data, num_replicas=dist.get_world_size(), rank=rank

@@ -346,7 +346,7 @@ def break_graph(M, resol=1.0):
                 if M[i, j] > 0:
                     G.add_edge(i, j, weight=M[i, j])
         partition = community_louvain.best_partition(G, resolution=resol)
-    elif isinstance(M, networkx.classes.graph.Graph):
+    elif isinstance(M, nx.classes.graph.Graph):
         G = M
         partition = community_louvain.best_partition(G, resolution=resol)
 
