@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: scept-base-training
+  namespace: default
+spec:
+  template:
+    metadata:
+      labels:
+        app: scept-base-training
+    spec:
+      containers:
+      - name: scept-base-training-container
+        image: 10.27.65.194:31500/scept_base_torchrun:v7 # Placeholder for the custom image from your registry
+        env:
+        - name: UNIQUE_JOB_DIR
+          value: /workspace/ScePT-plus-plus/training/scept-base-training
+        command: ["torchrun", "--nproc_per_node=1", "ScePT/train.py", "--train_data_dict", "nuScenes_train.pkl", "--eval_data_dict", "nuScenes_val.pkl", "--offline_scene_graph", "yes", "--preprocess_workers=8", "--log_dir", "$(UNIQUE_JOB_DIR)", "--train_epochs=500", "--augment", "--conf", "./config/clique_nusc_config.json", "--indexing_workers=8", "--batch_size=512", "--vis_every=10", "--map_encoding", "--incl_robot_node", "--eval_every=10", "--use_processed_data", "--data_dir", "./experiments/processed", "--nuscenes_path", "./publicdatasets/nuscenes", "--eval_batch_size=512", "--num_workers=16"] # Adjust if the image uses a different starting command.
+        resources:
+          limits:
+            #memory: "128Gi"
+            cpu: "32000m"
+            nvidia.com/gpu: 1 # Requesting 1 GPU
+        volumeMounts:
+        - name: scept-training-volume
+          mountPath: /workspace/ScePT-plus-plus/training
+        - name: nfs-publicdatasets
+          mountPath: /workspace/ScePT-plus-plus/publicdatasets
+      restartPolicy: OnFailure
+      initContainers:
+      - name: prepare-directory
+        image: busybox:latest
+        command: ["/bin/sh", "-c"]
+        args: ["mkdir -p $(UNIQUE_JOB_DIR)"]
+        env:
+        - name: UNIQUE_JOB_DIR
+          value: /data/scept-base-training
+        volumeMounts:
+        - name: scept-training-volume
+          mountPath: /data
+      volumes:
+      - name: scept-training-volume
+        persistentVolumeClaim:
+          claimName: dl-training-pvc
+      - name: nfs-publicdatasets
+        nfs:
+          server: 10.27.194.197
+          path: /publicdatasets
+      hostIPC: true

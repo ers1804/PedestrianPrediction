@@ -73,7 +73,7 @@ def train(rank, args):
         hyperparams["learning_rate"] = args.learning_rate
     hyperparams["learning_rate"] *= dist.get_world_size()
     if args.train_data_dict == "nuScenes_train.pkl":
-        nusc_path = "/home/erik/NAS/publicdatasets/nuscenes"
+        nusc_path = args.nuscenes_path
     elif args.train_data_dict == "nuScenes_mini_train.pkl":
         nusc_path = "../experiments/nuScenes/v1.0-mini"
     else:
@@ -190,7 +190,7 @@ def train(rank, args):
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=6,
+        num_workers=args.num_workers,
     )
     train_sampler = data.distributed.DistributedSampler(
         train_data, num_replicas=dist.get_world_size(), rank=rank
@@ -255,7 +255,7 @@ def train(rank, args):
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
-        num_workers=6,
+        num_workers=args.num_workers,
     )
     eval_sampler = data.distributed.DistributedSampler(
         eval_data, num_replicas=dist.get_world_size(), rank=rank

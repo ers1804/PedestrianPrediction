@@ -15,6 +15,11 @@ parser.add_argument("--preprocess_workers",
                     type=int,
                     default=0)
 
+parser.add_argument("--num_workers",
+                    help="number of processes to spawn for dataset loading",
+                    type=int,
+                    default=0)
+
 parser.add_argument("--indexing_workers",
                     help="number of processes to spawn for dataset indexing",
                     type=int,
@@ -107,6 +112,11 @@ parser.add_argument('--no_edge_encoding',
                     action='store_true')
 
 # Data Parameters
+parser.add_argument("--nuscenes_path",
+                    help="path to the nuscenes dataset",
+                    type=str,
+                    default='/home/erik/NAS/publicdatasets/nuscenes')
+
 parser.add_argument("--data_dir",
                     help="what dir to look in for data",
                     type=str,
