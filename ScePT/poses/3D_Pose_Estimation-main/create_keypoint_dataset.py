@@ -341,7 +341,9 @@ if __name__ == "__main__":
                 os.makedirs(base_path + folder + "/images/")
     dir_counter = {"training/": {"2D": 0, '3D': 0, "3D_2D": 0}, "validation/": {"2D": 0, '3D': 0, "3D_2D": 0}, "testing/": {"2D": 0, '3D': 0, "3D_2D": 0}, "domain_adaptation/validation/": {"2D": 0, '3D': 0, "3D_2D": 0},
                    "domain_adaptation/training/": {"2D": 0, '3D': 0, "3D_2D": 0}, "testing_3d_camera_only_detection": {"2D": 0, '3D': 0, "3D_2D": 0}, "domain_adaptation/testing/": {"2D": 0, '3D': 0, "3D_2D": 0}}
-    dir_names = ["training/", "validation/", "testing/", "domain_adaptation/validation/", "domain_adaptation/training/", "testing_3d_camera_only_detection", "domain_adaptation/testing/"]
+    # Original dir_names
+    # dir_names = ["training/", "validation/", "testing/", "domain_adaptation/validation/", "domain_adaptation/training/", "testing_3d_camera_only_detection", "domain_adaptation/testing/"]
+    dir_names = ["training/", "validation/", "testing/", "testing_interactive/", "training_20s/", "validation_interactive/"]
     # dir_names = ["training/", "validation/"]
     # dir_names = ["validation/"]
     
