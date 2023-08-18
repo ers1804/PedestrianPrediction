@@ -1,0 +1,9 @@
+{
+    "python.linting.flake8Enabled": true,
+    "python.linting.pycodestyleEnabled": false,
+    "python.linting.enabled": true,
+    "jupyter.jupyterServerType": "local",
+    "cSpell.words": [
+        "venv"
+    ]
+}

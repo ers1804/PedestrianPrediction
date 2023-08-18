@@ -1,0 +1,155 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "justMyCode": false,
+    "configurations": [
+        {
+            "name": "Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "Main Fusion Supervised",
+            "type": "python",
+            "request": "launch",
+            "program": "./main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model_type",
+                "Lidar2dKeypointFusion",
+                "--dataset",
+                "waymo_2d_labels_supervised"
+            ]
+        },
+        {
+            "name": "Main Self-Supervised",
+            "type": "python",
+            "request": "launch",
+            "program": "./main.py",
+            "console": "integratedTerminal",
+            "args": [
+            ]
+        },
+        {
+            "name": "Tune Self-Supervised",
+            "type": "python",
+            "request": "launch",
+            "program": "./main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--tune",
+                "waymo_weakly_supervised",
+                ""
+
+            ]
+        },
+        {
+            "name": "Main  Self-Supervised wandb",
+            "type": "python",
+            "request": "launch",
+            "program": "./main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--wandb", 
+                "True"
+            ]
+        },
+        {
+            "name": "Main with wandb",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--wandb",
+                "True"
+            ]
+        },
+        {
+            "name": "Tune",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--tune",
+                "waymo_2d_labels_supervised",
+            ]
+        },
+        {
+            "name": "Load run",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model_id",
+                "/lhome/petbau/master_thesis/runs/run_2022-07-04T13-57-49-671634/"
+            ]
+        },
+        {
+            "name": "Vis run",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--run",
+                "vis",
+                "--dataset",
+                "waymo_2d_labels_supervised",
+                "--model_id",
+                "/lhome/petbau/master_thesis/runs/run_2022-10-13T20-15-23-337959_Lidar2dKeypointFusion_waymo_2d_labels_supervised" // weakly_supervised -> "/lhome/petbau/master_thesis/runs/run_2022-08-25T23-28-41-186939"
+            ]
+        },
+        {
+            "name": "Eval run",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--run",
+                "eval",
+                "--model_id",
+                "/lhome/petbau/master_thesis/runs/run_2022-10-21T09-14-55-421304_WEAKLY_SUPERVISES_FINAL"
+            ]
+        },
+        {
+            "name": "Vis scene",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/visualizations/vis_scene_data.py",
+            "console": "integratedTerminal",
+            "args": [
+                "/media/petbau/data/waymo/v1.4/individual_files/validation/segment-15959580576639476066_5087_580_5107_580_with_camera_labels.tfrecord",
+                "/lhome/petbau/test/vis_2"
+            ]
+        },
+        {
+            "name": "Create video from vis scene",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/visualizations/create_video.py",
+            "console": "integratedTerminal",
+            "args": [
+                "/lhome/petbau/test/vis/"
+            ]
+        },
+        {
+            "name": "Prepare dataset",
+            "type": "python",
+            "request": "launch",
+            "program": "/lhome/petbau/master_thesis/3D_Pose_Estimation/create_keypoint_dataset.py",
+            "console": "integratedTerminal",
+            "args": [
+                "/media/petbau/data/waymo/v1.4/individual_files/",
+                "/media/petbau/data/waymo/vtest/"
+            ]
+        },
+    ]
+}

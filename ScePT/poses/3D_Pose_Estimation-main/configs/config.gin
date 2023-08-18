@@ -1,0 +1,63 @@
+
+###############
+### DATASET ###
+###############
+load.data_src = "/media/petbau/data/waymo/v0.10/"
+load.batch_size = 64
+
+WaymoOpenDataset.pc_min_size = 75
+WaymoOpenDataset.min_2D_keypoints = 7
+WaymoOpenDataset.num_closest_cp = 4
+WaymoOpenDataset.lidar_projection_ratio = 0.85
+WaymoOpenDataset.alpha_pose_confidence_score = 0.7
+
+#########################P
+### MODEL PARAMS ###
+#########################                   
+# SimpleLiftModel
+SimpleLiftingModel.latent_dim = 512
+# PointNet
+PointNet.dropout = 0.4
+# Fusion uses values from single modalitites... 
+
+#########################
+### SUPERVISED PARAMS ###
+#########################
+# TRAINER
+SupervisedTrainer.epochs = 250
+SupervisedTrainer.lr = 0.0002
+SupervisedTrainer.lr_decay_factor = 0.8
+SupervisedTrainer.lr_step  = 1000
+
+SupervisedTrainer.loss_types = {
+                        # dict that contains weight of each loss (false or 0 if loss not used)
+                        "masked_mpjpe":0.9,
+                        "l1": 0.25,
+                        "bone_length":0.2,
+                        "feature_transform_reguliarzer": 0.000001
+                        } 
+
+##############################
+### SELF-SUPERVISED PARAMS ###
+##############################
+# TRAINER
+SelfSupervisedTrainer.epochs = 25
+SelfSupervisedTrainer.lr = 0.00005
+SelfSupervisedTrainer.lr_decay_factor = 0.9
+
+SelfSupervisedTrainer.pseudo_weights_3D = 1
+# weights for training losses
+SelfSupervisedTrainer.pseudo_weight = 1
+SelfSupervisedTrainer.direct_reprojection_weight = 0
+
+SelfSupervisedTrainer.loss_types = {
+                        # dict that contains weight of each loss (false or 0 if loss not used)
+                        "masked_mpjpe":0.85,
+                        "l1":0.2,
+                        "bone_length":0.3,
+                        "feature_transform_reguliarzer": 0.001,
+                        } 
+
+
+
+

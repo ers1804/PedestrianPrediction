@@ -1,0 +1,38 @@
+###############
+### DATASET ###
+###############
+load.data_src = "/media/petbau/data/waymo/v0.10/"
+load.batch_size = 64
+
+WaymoOpenDataset.pc_min_size = 20
+WaymoOpenDataset.min_2D_keypoints = 7
+WaymoOpenDataset.num_closest_cp = 4
+WaymoOpenDataset.lidar_projection_ratio = 0.5
+
+
+
+# Parameters for Lidar2dKeypointFusionmodel:
+# ==============================================================================
+Lidar2dKeypointFusionmodel.dropout = 0.3
+Lidar2dKeypointFusionmodel.hidden_size = 256
+
+
+# Parameters for PointNet:
+# ==============================================================================
+PointNet.dropout = 0.4
+
+# Parameters for SimpleLiftingModel:
+# ==============================================================================
+SimpleLiftingModel.latent_dim = 512
+
+# Parameters for Trainer:
+# ==============================================================================
+SupervisedTrainer.epochs = 150
+SupervisedTrainer.lr = 7.18558743871138e-05
+SupervisedTrainer.lr_decay_factor = 0.8
+SupervisedTrainer.lr_step = 375
+SupervisedTrainer.loss_types = \
+    {'bone_length': 0,
+     'feature_transform_reguliarzer': 0.001,
+     'l1': 0,
+     'masked_mpjpe': 0.32263942338655915}
