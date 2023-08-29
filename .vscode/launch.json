@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["--data=/home/erik/nas_drive/publicdatasets/nuscenes", "--version=v1.0-trainval", "--output_path=../processed", "--num_worker=10"],
+            "args": ["/home/erik/NAS/publicdatasets/waymo_perception/", "/home/erik/NAS/publicdatasets/waymo_perception/waymo_pose/"],
         },
         {
             "name": "train.py",
