@@ -562,19 +562,22 @@ def store_other_information(frame: v2.CameraImageComponent,
 
 if __name__ == "__main__":
 
-    labels_dict_2d = {}
-    labels_dict_3d_2d = {}
-    labels_dict_3d = {}
-    box_points_list_2d = []
-    box_points_list_3d_2d = []
-    box_points_list_3d = []
+    # Move dictionaries and lists into the loop and save them on a context basis
+    # labels_dict_2d = {}
+    # labels_dict_3d_2d = {}
+    # labels_dict_3d = {}
+    # box_points_list_2d = []
+    # box_points_list_3d_2d = []
+    # box_points_list_3d = []
     counter_2d = 0
     counter_3d = 0
     counter_3d_2d = 0
     global_counter = 0
-    image_segment_relations_2d = []
-    image_segment_relations_3d = []
-    image_segment_relations_3d_2d = []
+
+    # Move into loop so we don't have a mismatch between dicts and relations
+    # image_segment_relations_2d = []
+    # image_segment_relations_3d = []
+    # image_segment_relations_3d_2d = []
 
     for folder in ["2D/", "3D/", "3D_2D/"]:
         if not os.path.exists(base_path + folder):
@@ -638,164 +641,275 @@ if __name__ == "__main__":
             cam_hkp = v2.merge(cam_hkp, cam_box)
             cam_hkp = v2.merge(cam_hkp, cam_calib)
             cam_hkp = v2.merge(cam_hkp, association, right_nullable=True)
-            lidar_hkp = v2.merge(lidar_hkp, lidar_box, right_nullable=True)
-            #lidar_hkp = v2.merge(lidar_hkp, lidar, right_group=True)
+
+            #lidar_hkp = v2.merge(lidar_hkp, lidar_box, right_nullable=True)
+
             cam_lidar_hkp = v2.merge(cam_hkp, lidar_hkp, left_nullable=True, right_nullable=True)
             lidar = v2.merge(lidar, lidar_cam_proj, right_nullable=True)
             lidar = v2.merge(lidar, lidar_pose, right_nullable=True)
             lidar = v2.merge(lidar, lidar_calib, right_nullable=True)
             cam_lidar_hkp = v2.merge(cam_lidar_hkp, lidar, right_nullable=True, right_group=True)
+            cam_lidar_hkp = v2.merge(cam_lidar_hkp, lidar_box, right_nullable=True)
 
             # Compute the generate data frame
-            computed_lidar_cam_hkp = cam_lidar_hkp.compute()
+            print("Lenght of data frame: ", len(cam_lidar_hkp))
+            length = len(cam_lidar_hkp)
 
-            # List for storing timestamps of saved point clouds, so a point cloud is not saved multiple times
-            pc_timestamps = {}
-            missing_timestamps = []
+            # Release variables from memory
+            del cam_img
+            del cam_box
+            del cam_hkp
+            del cam_calib
+            del lidar
+            del lidar_box
+            del lidar_hkp
+            del association
+            del lidar_cam_proj
+            del lidar_pose
+            del lidar_calib
+            del cam_box_path
+            del cam_hkp_path
+            del cam_calib_path
+            del lidar_path
+            del lidar_box_path
+            del lidar_hkp_path
+            del association_path
+            del lidar_cam_proj_path
+            del lidar_pose_path
+            del lidar_calib_path
 
-            for index, row in computed_lidar_cam_hkp.iterrows():
-                print(row)
-                # Create components from row
-                camera_hkp_component = v2.CameraHumanKeypointsComponent.from_dict(row)
-                camera_box_component = v2.CameraBoxComponent.from_dict(row)
-                camera_image_component = v2.CameraImageComponent.from_dict(row)
-                camera_calib_component = v2.CameraCalibrationComponent.from_dict(row)
-                lidar_box_component = v2.LiDARBoxComponent.from_dict(row)
-                lidar_hkp_component = v2.LiDARHumanKeypointsComponent.from_dict(row)
-                lidar_component = v2.LiDARComponent.from_dict(row)
-                lidar_pose_component = v2.LiDARPoseComponent.from_dict(row)
-                lidar_calib_component = v2.LiDARCalibrationComponent.from_dict(row)
-                lidar_cam_proj_component = v2.LiDARCameraProjectionComponent.from_dict(row)
-
-                # Load point cloud once for the given timestamp
-                # As we do not have camera data for all objects (lidar objects), we don't generate it (we need the frame pose for this function)
-                if row['key.frame_timestamp_micros'] not in pc_timestamps.keys():
-                    if not math.isnan(row['key.camera_name']):
-                        points_all, cp_points = load_point_cloud_v2(camera_image_component, lidar_cam_proj_component, lidar_component, lidar_pose_component, lidar_calib_component, row['key.laser_name'])
-                        pc_timestamps[row['key.frame_timestamp_micros']] = [points_all, cp_points]
-                        if row['key.frame_timestamp_micros'] in missing_timestamps:
-                            missing_timestamps.remove(row['key.frame_timestamp_micros'])
-                    else:
-                        missing_timestamps.append(row['key.frame_timestamp_micros'])
-                        points_all = None
-                        cp_points = None
+            if length > 0:
+                # Divide data frame as some are to big to be loaded into memory
+                data_frames = []
+                if length > 2500:
+                    first_half_partitions = cam_lidar_hkp.npartitions // 2
+                    data_frames.append(cam_lidar_hkp.get_partition(list(range(first_half_partitions))))
+                    second_half_partitions = cam_lidar_hkp.npartitions // 2
+                    if cam_lidar_hkp.npartitions % 2 != 0:
+                        second_half_partitions += 1
+                    data_frames.append(cam_lidar_hkp.get_partition(list(range(second_half_partitions, cam_lidar_hkp.npartitions))))
                 else:
-                    points_all, cp_points = pc_timestamps[row['key.frame_timestamp_micros']]
+                    data_frames.append(cam_lidar_hkp)
+                # computed_lidar_cam_hkp = cam_lidar_hkp.compute()
 
-                # 3D and 2D keypoints are available
-                if not np.isnan([camera_hkp_component.camera_keypoints.type]).any() and not np.isnan([lidar_hkp_component.lidar_keypoints.type]).any():
-                # if isinstance(camera_hkp_component.camera_keypoints.type, list) and isinstance(lidar_hkp_component.lidar_keypoints.type, list):
-                    id = str(row['key.frame_timestamp_micros']) + "_" + str(row['key.camera_name']) + "_" + str(row['key.camera_object_id'])
+                # List for storing timestamps of saved point clouds, so a point cloud is not saved multiple times
+                pc_timestamps = {}
+                #missing_timestamps = []
 
-                    labels_dict_3d_2d[id] = {}
-                    counter_3d_2d += 1
+                # Lists and dictionaries for storing everything
+                labels_dict_2d = {}
+                labels_dict_3d_2d = {}
+                labels_dict_3d = {}
+                box_points_list_2d = []
+                box_points_list_3d_2d = []
+                box_points_list_3d = []
+                image_segment_relations_2d = []
+                image_segment_relations_3d = []
+                image_segment_relations_3d_2d = []
 
-                    # Crop camera image and keypoints
-                    cropped_image, cropped_camera_keypoints = get_cropped_cam_data(camera_image_component.image, camera_hkp_component, camera_box_component.box)
-                    img_height, img_width, _ = cropped_image.shape
+                # Get the context name from the frame path
+                base_name = os.path.basename(frame_path)
+                context = os.path.splitext(base_name)[0]
 
-                    # save image data to file
-                    cv2.imwrite(base_path + "3D_2D/images/" + id + ".jpg", cv2.cvtColor(cropped_image, cv2.COLOR_RGB2BGR))
+                for frame in data_frames:
+                    computed_lidar_cam_hkp = frame.compute()
 
-                    labels_dict_3d_2d[id]['keypoints_2d'] = {}
-                    for joint, x, y, vis in zip(cropped_camera_keypoints.camera_keypoints.type, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.x, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.y, cropped_camera_keypoints.camera_keypoints.keypoint_2d.visibility.is_occluded):
-                        labels_dict_3d_2d[id]['keypoints_2d'][joint] = {'x': x, 'y': y, 'occluded': vis}
-                    
-                    labels_dict_3d_2d[id]['img_2d_height'] = img_height
-                    labels_dict_3d_2d[id]['img_2d_width'] = img_width
+                    for _, row in computed_lidar_cam_hkp.iterrows():
+                        #print(row)
+                        # Create components from row
+                        camera_hkp_component = v2.CameraHumanKeypointsComponent.from_dict(row)
+                        camera_box_component = v2.CameraBoxComponent.from_dict(row)
+                        camera_image_component = v2.CameraImageComponent.from_dict(row)
+                        camera_calib_component = v2.CameraCalibrationComponent.from_dict(row)
+                        lidar_box_component = v2.LiDARBoxComponent.from_dict(row)
+                        lidar_hkp_component = v2.LiDARHumanKeypointsComponent.from_dict(row)
+                        lidar_component = v2.LiDARComponent.from_dict(row)
+                        lidar_pose_component = v2.LiDARPoseComponent.from_dict(row)
+                        lidar_calib_component = v2.LiDARCalibrationComponent.from_dict(row)
+                        lidar_cam_proj_component = v2.LiDARCameraProjectionComponent.from_dict(row)
 
-                    # Get full image keypoints as well (I don't know if this is used anywhere)
-                    labels_dict_3d_2d[id]['keypoints_2d_image'] = {}
-                    for joint, x, y, vis in zip(camera_hkp_component.camera_keypoints.type, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.x, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.y, camera_hkp_component.camera_keypoints.keypoint_2d.visibility.is_occluded):
-                        labels_dict_3d_2d[id]['keypoints_2d_image'][joint] = {'x': x, 'y': y, 'occluded': vis}
-                    
-                    # Store 3D Keypoints
-                    labels_dict_3d_2d[id]['keypoints_3d'] = {}
-                    for joint, x, y, z, vis in zip(lidar_hkp_component.lidar_keypoints.type, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.x, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.y, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.z, lidar_hkp_component.lidar_keypoints.keypoint_3d.visibility.is_occluded):
-                        labels_dict_3d_2d[id]['keypoints_3d'][joint] = {'x': x, 'y': y, 'z': z, 'occluded': vis}
-                    
-                    labels_dict_3d_2d[id]['keypoints_3d_arr'] = create_array(labels_dict_3d_2d[id], three_dim=True)
-                    labels_dict_3d_2d[id]['keypoints_2d_arr'] = create_array(labels_dict_3d_2d[id], three_dim=False)
-                    image_segment_relations_3d_2d.append([id, row['key.frame_timestamp_micros'], row['key.camera_object_id'], row['key.camera_name'], frame_path])
-                    store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_3d_2d, id, row['key.camera_name'])
-                    
-                    store_lidar_and_projections_v2(lidar_box_component, labels_dict_3d_2d, row['key.camera_name'])
-                    box_points_list_3d_2d.append(labels_dict_3d_2d[id]['lidar'].shape[0])
-                    global_counter += 1
-                    dir_counter[dir_name]['3D_2D'] += 1
+                        # Take row out of memory
+                        del row
+
+                        # Load point cloud once for the given timestamp
+                        # As we do not have camera data for all objects (lidar objects), we don't generate it (we need the frame pose for this function)
+                        if camera_hkp_component.key.frame_timestamp_micros not in pc_timestamps.keys():
+                            if not math.isnan(camera_image_component.key.camera_name):
+                                points_all, cp_points = load_point_cloud_v2(camera_image_component, lidar_cam_proj_component, lidar_component, lidar_pose_component, lidar_calib_component, lidar_component.key.laser_name)
+                                pc_timestamps[camera_hkp_component.key.frame_timestamp_micros] = [points_all, cp_points]
+                                # if row['key.frame_timestamp_micros'] in missing_timestamps:
+                                #     missing_timestamps.remove(row['key.frame_timestamp_micros'])
+                            else:
+                                # missing_timestamps.append(row['key.frame_timestamp_micros'])
+                                points_all = None
+                                cp_points = None
+                        else:
+                            points_all, cp_points = pc_timestamps[camera_hkp_component.key.frame_timestamp_micros]
+
+                        # 3D and 2D keypoints are available
+                        if not np.isnan([camera_hkp_component.camera_keypoints.type]).any() and not np.isnan([lidar_hkp_component.lidar_keypoints.type]).any():
+                        # if isinstance(camera_hkp_component.camera_keypoints.type, list) and isinstance(lidar_hkp_component.lidar_keypoints.type, list):
+                            id = str(camera_hkp_component.key.frame_timestamp_micros) + "_" + str(camera_image_component.key.camera_name) + "_" + str(camera_hkp_component.key.camera_object_id)
+
+                            labels_dict_3d_2d[id] = {}
+                            counter_3d_2d += 1
+
+                            # Crop camera image and keypoints
+                            cropped_image, cropped_camera_keypoints = get_cropped_cam_data(camera_image_component.image, camera_hkp_component, camera_box_component.box)
+                            img_height, img_width, _ = cropped_image.shape
+
+                            # save image data to file
+                            cv2.imwrite(base_path + "3D_2D/images/" + id + ".jpg", cv2.cvtColor(cropped_image, cv2.COLOR_RGB2BGR))
+
+                            labels_dict_3d_2d[id]['keypoints_2d'] = {}
+                            for joint, x, y, vis in zip(cropped_camera_keypoints.camera_keypoints.type, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.x, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.y, cropped_camera_keypoints.camera_keypoints.keypoint_2d.visibility.is_occluded):
+                                labels_dict_3d_2d[id]['keypoints_2d'][joint] = {'x': x, 'y': y, 'occluded': vis}
+                            
+                            labels_dict_3d_2d[id]['img_2d_height'] = img_height
+                            labels_dict_3d_2d[id]['img_2d_width'] = img_width
+
+                            # Get full image keypoints as well (I don't know if this is used anywhere)
+                            labels_dict_3d_2d[id]['keypoints_2d_image'] = {}
+                            for joint, x, y, vis in zip(camera_hkp_component.camera_keypoints.type, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.x, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.y, camera_hkp_component.camera_keypoints.keypoint_2d.visibility.is_occluded):
+                                labels_dict_3d_2d[id]['keypoints_2d_image'][joint] = {'x': x, 'y': y, 'occluded': vis}
+                            
+                            # Store 3D Keypoints
+                            labels_dict_3d_2d[id]['keypoints_3d'] = {}
+                            for joint, x, y, z, vis in zip(lidar_hkp_component.lidar_keypoints.type, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.x, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.y, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.z, lidar_hkp_component.lidar_keypoints.keypoint_3d.visibility.is_occluded):
+                                labels_dict_3d_2d[id]['keypoints_3d'][joint] = {'x': x, 'y': y, 'z': z, 'occluded': vis}
+                            
+                            labels_dict_3d_2d[id]['keypoints_3d_arr'] = create_array(labels_dict_3d_2d[id], three_dim=True)
+                            labels_dict_3d_2d[id]['keypoints_2d_arr'] = create_array(labels_dict_3d_2d[id], three_dim=False)
+                            image_segment_relations_3d_2d.append([id, camera_hkp_component.key.frame_timestamp_micros, camera_hkp_component.key.camera_object_id, camera_hkp_component.key.camera_name, context])
+                            store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_3d_2d, id, camera_hkp_component.key.camera_name)
+                            
+                            store_lidar_and_projections_v2(lidar_box_component, labels_dict_3d_2d, camera_hkp_component.key.camera_name)
+                            box_points_list_3d_2d.append(labels_dict_3d_2d[id]['lidar'].shape[0])
+                            global_counter += 1
+                            dir_counter[dir_name]['3D_2D'] += 1
+                        
+                        # Only 3D keypoints available
+                        elif np.isnan(camera_hkp_component.camera_keypoints.type).any() and not np.isnan([lidar_hkp_component.lidar_keypoints.type]).any():
+                        # elif not isinstance(camera_hkp_component.camera_keypoints.type, list) and isinstance(lidar_hkp_component.lidar_keypoints.type, list):
+                            if math.isnan(camera_hkp_component.key.camera_name):
+                                cam = -1
+                                id = str(camera_hkp_component.key.frame_timestamp_micros) + "_" + str(lidar_component.key.laser_name[0]) + "_" + str(lidar_hkp_component.key.laser_object_id)
+                            else:
+                                id = str(camera_hkp_component.key.frame_timestamp_micros) + "_" + str(camera_hkp_component.key.camera_name) + "_" + str(camera_hkp_component.key.camera_object_id)
+                                cam = 0
+                            labels_dict_3d[id]= {}
+                            counter_3d += 1
+
+                            # 3D Keypoints
+                            labels_dict_3d[id]['keypoints_3d'] = {}
+                            for joint, x, y, z, vis in zip(lidar_hkp_component.lidar_keypoints.type, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.x, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.y, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.z, lidar_hkp_component.lidar_keypoints.keypoint_3d.visibility.is_occluded):
+                                labels_dict_3d[id]['keypoints_3d'][joint] = {'x': x, 'y': y, 'z': z, 'occluded': vis}
+                            
+                            labels_dict_3d[id]['keypoints_3d_arr'] = create_array(labels_dict_3d[id], three_dim=True)
+                            image_segment_relations_3d.append([id, camera_hkp_component.key.frame_timestamp_micros, lidar_hkp_component.key.laser_object_id[0], lidar_component.key.laser_name[0], context])
+                            store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_3d, id, cam=cam)
+
+                            # Point cloud data is already stored
+                            # Check if data is available
+                            if points_all is not None:
+                                #box = box_utils.box_to_tensor(lidar_box_component.box)[tf.newaxis, :]
+                                box = tf.constant([lidar_box_component.box.center.x, lidar_box_component.box.center.y, lidar_box_component.box.center.z, lidar_box_component.box.size.x, lidar_box_component.box.size.y, lidar_box_component.box.size.z, lidar_box_component.box.heading])[tf.newaxis, :]
+                                box_points = points_all[box_utils.is_within_box_3d(points_all, box)[:, 0]]
+                                labels_dict_3d[id]['lidar'] = box_points.astype('float32')
+                                box_points_list_3d.append(box_points.shape[0])
+                            else:
+                                labels_dict_3d[id]['lidar'] = np.array([], dtype=np.float32)
+                                box_points_list_3d.append(0)
+
+                            global_counter += 1
+                            dir_counter[dir_name]['3D'] += 1
+                        
+                        # Only 2D keypoints available
+                        elif not np.isnan([camera_hkp_component.camera_keypoints.type]).any() and np.isnan(lidar_hkp_component.lidar_keypoints.type).any():
+                        # elif isinstance(camera_hkp_component.camera_keypoints.type, list) and not isinstance(lidar_hkp_component.lidar_keypoints.type, list):
+                            id = str(camera_hkp_component.key.frame_timestamp_micros) + "_" + str(camera_hkp_component.key.camera_name) + "_" + str(camera_hkp_component.key.camera_object_id)
+
+                            cropped_image, cropped_camera_keypoints = get_cropped_cam_data(camera_image_component.image, camera_hkp_component, camera_box_component.box)
+                            img_height, img_width, _ = cropped_image.shape
+
+                            labels_dict_2d[id] = {}
+                            counter_2d += 1
+                            labels_dict_2d[id]['keypoints_2d'] = {}
+                            for joint, x, y, vis in zip(cropped_camera_keypoints.camera_keypoints.type, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.x, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.y, cropped_camera_keypoints.camera_keypoints.keypoint_2d.visibility.is_occluded):
+                                labels_dict_2d[id]['keypoints_2d'][joint] = {'x': x, 'y': y, 'occluded': vis}
+                            
+                            # Get full image keypoints as well, I don't know where this is used
+                            labels_dict_2d[id]['keypoints_2d_image'] = {}
+                            for joint, x, y, vis in zip(camera_hkp_component.camera_keypoints.type, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.x, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.y, camera_hkp_component.camera_keypoints.keypoint_2d.visibility.is_occluded):
+                                labels_dict_2d[id]['keypoints_2d_image'][joint] = {'x': x, 'y': y, 'occluded': vis}
+                            labels_dict_2d[id]['img_2d_height'] = img_height
+                            labels_dict_2d[id]['img_2d_width'] = img_width
+
+                            labels_dict_2d[id]['keypoints_2d_arr'] = create_array(labels_dict_2d[id], three_dim=False)
+                            image_segment_relations_2d.append([id, camera_hkp_component.key.frame_timestamp_micros, camera_hkp_component.key.camera_object_id, camera_hkp_component.key.camera_name, context])
+                            store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_2d, id, camera_hkp_component.key.camera_name)
+
+                            # Save image data to file
+                            cv2.imwrite(base_path + "2D/images/" + id + ".jpg", cv2.cvtColor(cropped_image, cv2.COLOR_RGB2BGR))
+
+                            store_lidar_and_projections_v2(lidar_box_component, labels_dict_2d, camera_hkp_component.key.camera_name)
+                            if np.isnan(labels_dict_2d[id]['lidar']).any():
+                                box_points_list_2d.append(0)
+                            else:
+                                box_points_list_2d.append(labels_dict_2d[id]['lidar'].shape[0])
+                            global_counter += 1
+                            dir_counter[dir_name]['2D'] += 1
+                        #print("Missing point cloud data for timestamps in context: ", frame_path)
+                        #print(missing_timestamps)
                 
-                # Only 3D keypoints available
-                elif np.isnan(camera_hkp_component.camera_keypoints.type).any() and not np.isnan([lidar_hkp_component.lidar_keypoints.type]).any():
-                # elif not isinstance(camera_hkp_component.camera_keypoints.type, list) and isinstance(lidar_hkp_component.lidar_keypoints.type, list):
-                    if math.isnan(row['key.camera_name']):
-                        cam = -1
-                        id = str(row['key.frame_timestamp_micros']) + "_" + str(row['key.laser_name'][0]) + "_" + str(row['key.key.laser_object_id'])
+                # Save the dictionaries and lists per context
+                for folder in ["2D/", "3D/", "3D_2D/"]:
+
+                    if folder == "2D/":
+                        data = labels_dict_2d
+                        box_points_list = np.array(box_points_list_2d)
+                        image_segment_relations = image_segment_relations_2d
+                    elif folder == "3D/":
+                        data = labels_dict_3d
+                        box_points_list = np.array(box_points_list_3d)
+                        image_segment_relations = image_segment_relations_3d
                     else:
-                        id = str(row['key.frame_timestamp_micros']) + "_" + str(row['key.camera_name']) + "_" + str(row['key.camera_object_id'])
-                        cam = 0
-                    labels_dict_3d[id]= {}
-                    counter_3d += 1
+                        data = labels_dict_3d_2d
+                        box_points_list = np.array(box_points_list_3d_2d)
+                        image_segment_relations = image_segment_relations_3d_2d
 
-                    # 3D Keypoints
-                    labels_dict_3d[id]['keypoints_3d'] = {}
-                    for joint, x, y, z, vis in zip(lidar_hkp_component.lidar_keypoints.type, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.x, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.y, lidar_hkp_component.lidar_keypoints.keypoint_3d.location_m.z, lidar_hkp_component.lidar_keypoints.keypoint_3d.visibility.is_occluded):
-                        labels_dict_3d[id]['keypoints_3d'][joint] = {'x': x, 'y': y, 'z': z, 'occluded': vis}
-                    
-                    labels_dict_3d[id]['keypoints_3d_arr'] = create_array(labels_dict_3d[id], three_dim=True)
-                    image_segment_relations_3d.append([id, row['key.frame_timestamp_micros'], row['key.laser_object_id'][0], row['key.laser_name'][0], frame_path])
-                    store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_3d, id, cam=cam)
+                    with open(base_path + folder + context + '_labels.pkl', 'wb')as f:
+                        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-                    # Point cloud data is already stored
-                    # Check if data is available
-                    if points_all is not None:
-                        box = box_utils.box_to_tensor(lidar_box_component.box)[tf.newaxis, :]
-                        box_points = points_all[box_utils.is_within_box_3d(points_all, box)[:, 0]]
-                        labels_dict_3d[id]['lidar'] = box_points.astype('float32')
-                        box_points_list_3d.append(box_points.shape[0])
+                    if os.path.isfile(base_path + folder + context + '_image_segment_relations.csv'):
+                        with open(base_path + folder + context + '_image_segment_relations.csv', 'a') as csvfile:
+                            filewriter = csv.writer(csvfile, delimiter=',')
+                            for elm in image_segment_relations:
+                                filewriter.writerow(elm)
                     else:
-                        labels_dict_3d[id]['lidar'] = np.array([])
-                        box_points_list_3d.append(0)
+                        with open(base_path + folder + context + '_image_segment_relations.csv', 'w') as csvfile:
+                            filewriter = csv.writer(csvfile, delimiter=',')
+                            filewriter.writerow(['image_id', 'frame', 'obj-id', 'cam', 'context'])
 
-                    global_counter += 1
-                    dir_counter[dir_name]['3D'] += 1
-                
-                # Only 2D keypoints available
-                elif not np.isnan([camera_hkp_component.camera_keypoints.type]).any() and np.isnan(lidar_hkp_component.lidar_keypoints.type).any():
-                # elif isinstance(camera_hkp_component.camera_keypoints.type, list) and not isinstance(lidar_hkp_component.lidar_keypoints.type, list):
-                    id = str(row['key.frame_timestamp_micros']) + "_" + str(row['key.camera_name']) + "_" + str(row['key.camera_object_id'])
+                        with open(base_path + folder + context + '_image_segment_relations.csv', 'a') as csvfile:
+                            filewriter = csv.writer(csvfile, delimiter=',')
+                            for elm in image_segment_relations:
+                                filewriter.writerow(elm)
 
-                    cropped_image, cropped_camera_keypoints = get_cropped_cam_data(camera_image_component.image, camera_hkp_component, camera_box_component.box)
-                    img_height, img_width, _ = cropped_image.shape
+                    np.save(base_path + folder + context + '_lidar_point_stats.npy', box_points_list)
 
-                    labels_dict_2d[id] = {}
-                    counter_2d += 1
-                    labels_dict_2d[id]['keypoints_2d'] = {}
-                    for joint, x, y, vis in zip(cropped_camera_keypoints.camera_keypoints.type, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.x, cropped_camera_keypoints.camera_keypoints.keypoint_2d.location_px.y, cropped_camera_keypoints.camera_keypoints.keypoint_2d.visibility.is_occluded):
-                        labels_dict_2d[id]['keypoints_2d'][joint] = {'x': x, 'y': y, 'occluded': vis}
-                    
-                    # Get full image keypoints as well, I don't know where this is used
-                    labels_dict_2d[id]['keypoints_2d_image'] = {}
-                    for joint, x, y, vis in zip(camera_hkp_component.camera_keypoints.type, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.x, camera_hkp_component.camera_keypoints.keypoint_2d.location_px.y, camera_hkp_component.camera_keypoints.keypoint_2d.visibility.is_occluded):
-                        labels_dict_2d[id]['keypoints_2d_image'][joint] = {'x': x, 'y': y, 'occluded': vis}
-                    labels_dict_2d[id]['img_2d_height'] = img_height
-                    labels_dict_2d[id]['img_2d_width'] = img_width
+                    # checks
+                    if len(image_segment_relations) != len(data):
+                        print("Lengths of image_segment_relations and dict do not match. Please.")
+                        print(f"image_segment_relations: {len(image_segment_relations)} data points.")
+                        print(f"dict: {len(data)} data points.")
+                        print(f"Problem occurred for data in: {dir_name}.")
 
-                    labels_dict_2d[id]['keypoints_2d_arr'] = create_array(labels_dict_2d[id], three_dim=False)
-                    image_segment_relations_2d.append([id, row['key.frame_timestamp_micros'], row['key.camera_object_id'], row['key.camera_name'], frame_path])
-                    store_other_information(camera_image_component, lidar_box_component, camera_box_component, camera_calib_component, labels_dict_2d, id, row['key.camera_name'])
-
-                    # Save image data to file
-                    cv2.imwrite(base_path + "2D/images/" + id + ".jpg", cv2.cvtColor(cropped_image, cv2.COLOR_RGB2BGR))
-
-                    store_lidar_and_projections_v2(lidar_box_component, labels_dict_2d, row['key.camera_name'])
-                    if np.isnan(labels_dict_2d[id]['lidar']).any():
-                        box_points_list_2d.append(0)
-                    else:
-                        box_points_list_2d.append(labels_dict_2d[id]['lidar'].shape[0])
-                    global_counter += 1
-                    dir_counter[dir_name]['2D'] += 1
-                print("Missing point cloud data for timestamps in context {}: ", frame_path)
-                print(missing_timestamps)
+                    if len(box_points_list) != len(data):
+                        print("Lengths of box_points_list and dict do not match. Please.")
+                        print(f"box_points_list: {len(box_points_list)} data points.")
+                        print(f"dict: {len(data)} data points.")
+                        print(f"Problem occurred for data in: {dir_name}.")
 
 
     # save everything to file
@@ -812,47 +926,48 @@ if __name__ == "__main__":
     with open(base_path + 'info.json', 'w') as fp:
         json.dump(info_dict, fp)
 
-    for folder in ["2D/", "3D/", "3D_2D/"]:
+    # Moved saving into loop
+    # for folder in ["2D/", "3D/", "3D_2D/"]:
 
-        if folder == "2D/":
-            data = labels_dict_2d
-            box_points_list = np.array(box_points_list_2d)
-            image_segment_relations = image_segment_relations_2d
-        elif folder == "3D/":
-            data = labels_dict_3d
-            box_points_list = np.array(box_points_list_3d)
-            image_segment_relations = image_segment_relations_3d
-        else:
-            data = labels_dict_3d_2d
-            box_points_list = np.array(box_points_list_3d_2d)
-            image_segment_relations = image_segment_relations_3d_2d
+    #     if folder == "2D/":
+    #         data = labels_dict_2d
+    #         box_points_list = np.array(box_points_list_2d)
+    #         image_segment_relations = image_segment_relations_2d
+    #     elif folder == "3D/":
+    #         data = labels_dict_3d
+    #         box_points_list = np.array(box_points_list_3d)
+    #         image_segment_relations = image_segment_relations_3d
+    #     else:
+    #         data = labels_dict_3d_2d
+    #         box_points_list = np.array(box_points_list_3d_2d)
+    #         image_segment_relations = image_segment_relations_3d_2d
 
-        with open(base_path + folder + 'labels.pkl', 'wb')as f:
-            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+    #     with open(base_path + folder + 'labels.pkl', 'wb')as f:
+    #         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(base_path + folder + 'image_segment_relations.csv', 'w') as csvfile:
-            filewriter = csv.writer(csvfile, delimiter=',')
-            filewriter.writerow(['image_id', 'frame', 'id', 'cam', 'segment'])
+    #     with open(base_path + folder + 'image_segment_relations.csv', 'w') as csvfile:
+    #         filewriter = csv.writer(csvfile, delimiter=',')
+    #         filewriter.writerow(['image_id', 'frame', 'id', 'cam', 'segment'])
 
-        with open(base_path + folder + 'image_segment_relations.csv', 'a') as csvfile:
-            filewriter = csv.writer(csvfile, delimiter=',')
-            for elm in image_segment_relations:
-                filewriter.writerow(elm)
+    #     with open(base_path + folder + 'image_segment_relations.csv', 'a') as csvfile:
+    #         filewriter = csv.writer(csvfile, delimiter=',')
+    #         for elm in image_segment_relations:
+    #             filewriter.writerow(elm)
 
-        np.save(base_path + folder + 'lidar_point_stats.npy', box_points_list)
+    #     np.save(base_path + folder + 'lidar_point_stats.npy', box_points_list)
 
-        # checks
-        if len(image_segment_relations) != len(data):
-            print("Lengths of image_segment_relations and dict do not match. Please.")
-            print(f"image_segment_relations: {len(image_segment_relations)} data points.")
-            print(f"dict: {len(data)} data points.")
-            print(f"Problem occurred for data in: {dir_name}.")
+    #     # checks
+    #     if len(image_segment_relations) != len(data):
+    #         print("Lengths of image_segment_relations and dict do not match. Please.")
+    #         print(f"image_segment_relations: {len(image_segment_relations)} data points.")
+    #         print(f"dict: {len(data)} data points.")
+    #         print(f"Problem occurred for data in: {dir_name}.")
 
-        if len(box_points_list) != len(data):
-            print("Lengths of box_points_list and dict do not match. Please.")
-            print(f"box_points_list: {len(box_points_list)} data points.")
-            print(f"dict: {len(data)} data points.")
-            print(f"Problem occurred for data in: {dir_name}.")
+    #     if len(box_points_list) != len(data):
+    #         print("Lengths of box_points_list and dict do not match. Please.")
+    #         print(f"box_points_list: {len(box_points_list)} data points.")
+    #         print(f"dict: {len(data)} data points.")
+    #         print(f"Problem occurred for data in: {dir_name}.")
 
 
     ####################################################################################################
