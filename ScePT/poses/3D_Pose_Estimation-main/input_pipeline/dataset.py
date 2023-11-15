@@ -84,7 +84,7 @@ def load(data_src, batch_size, name):
         logging.info(f' Val dataset size: {len(val_data)}')
         logging.info(f' Test dataset size: {len(test_data)}')
 
-        train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=3)
+        train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=0)
         test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
         val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 

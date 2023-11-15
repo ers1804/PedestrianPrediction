@@ -11,7 +11,8 @@ import sys
 sys.path.append("../../../../../ScePT")
 
 from torch.utils.data import Dataset
-from waymo_open_dataset.camera.ops import py_camera_model_ops
+#from waymo_open_dataset import v2
+from waymo_open_dataset.wdl_limited.camera.ops import py_camera_model_ops
 
 from configs.constants import JOINT_KEYS
 
@@ -462,7 +463,11 @@ class WaymoOpenDataset(Dataset):
         del_keys = []
         count = 0
         for key in self.labels.keys():
-            if (not self.labels[key]['lidar'].shape[0] >= self.pc_min_size) or (self.lidar_projection_ratio >= self.labels[key]['lidar_cp_points_ratio']):
+            #print(self.labels[key]['lidar'])
+            if isinstance(self.labels[key]['lidar'], float):
+                del_keys.append(key)
+                count += 1
+            elif (not self.labels[key]['lidar'].shape[0] >= self.pc_min_size) or (self.lidar_projection_ratio >= self.labels[key]['lidar_cp_points_ratio']):
                 del_keys.append(key)
                 count += 1
         for key in del_keys:

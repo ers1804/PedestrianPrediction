@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Python: Current File",
             "type": "python",
@@ -11,7 +12,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": ["/home/erik/NAS/publicdatasets/waymo_perception/", "/home/erik/NAS/publicdatasets/waymo_perception/waymo_pose/"],
+            //"args": ["/home/erik/NAS/publicdatasets/waymo_perception/", "/home/erik/NAS/publicdatasets/waymo_perception/waymo_pose/"],
         },
         {
             "name": "train.py",
@@ -38,6 +39,14 @@
                     "--incl_robot_node",
                     "--eval_every=1",
                     "--use_processed_data"], // Only if data stays the same (e.g., ped only scenes)
+        },
+        {
+            "name": "main.py",
+            "type": "python",
+            "program": "/home/erik/ScePT/ScePT/poses/3D_Pose_Estimation-main/main.py",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
         },
     ]
 }
