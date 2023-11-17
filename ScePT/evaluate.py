@@ -67,12 +67,14 @@ def make_video(rank):
         args.eval_data_dict == "nuScenes_train.pkl"
         or args.eval_data_dict == "nuScenes_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        #nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = args.nuscenes_path
     elif (
         args.eval_data_dict == "nuScenes_mini_train.pkl"
         or args.eval_data_dict == "nuScenes_mini_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-mini"
+        #nusc_path = "../experiments/nuScenes/v1.0-mini"
+        nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
     scene_idx = range(0, 30)
@@ -154,12 +156,14 @@ def sim_planning(rank):
         args.eval_data_dict == "nuScenes_train.pkl"
         or args.eval_data_dict == "nuScenes_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        #nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = args.nuscenes_path
     elif (
         args.eval_data_dict == "nuScenes_mini_train.pkl"
         or args.eval_data_dict == "nuScenes_mini_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-mini"
+        #nusc_path = "../experiments/nuScenes/v1.0-mini"
+        nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
 
@@ -334,12 +338,14 @@ def eval_statistics(rank):
         args.eval_data_dict == "nuScenes_train.pkl"
         or args.eval_data_dict == "nuScenes_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        #nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = args.nuscenes_path
     elif (
         args.eval_data_dict == "nuScenes_mini_train.pkl"
         or args.eval_data_dict == "nuScenes_mini_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-mini"
+        #nusc_path = "../experiments/nuScenes/v1.0-mini"
+        nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
     processed_eval_file = "processed_" + args.eval_data_dict
@@ -484,12 +490,14 @@ def plot_snapshot(rank):
         args.eval_data_dict == "nuScenes_train.pkl"
         or args.eval_data_dict == "nuScenes_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        #nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = args.nuscenes_path
     elif (
         args.eval_data_dict == "nuScenes_mini_train.pkl"
         or args.eval_data_dict == "nuScenes_mini_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-mini"
+        #nusc_path = "../experiments/nuScenes/v1.0-mini"
+        nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
     scene = env.scenes[2]
@@ -629,12 +637,14 @@ def plot_snapshot_conditioning(rank):
         args.eval_data_dict == "nuScenes_train.pkl"
         or args.eval_data_dict == "nuScenes_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        #nusc_path = "../experiments/nuScenes/v1.0-trainval_meta"
+        nusc_path = args.nuscenes_path
     elif (
         args.eval_data_dict == "nuScenes_mini_train.pkl"
         or args.eval_data_dict == "nuScenes_mini_val.pkl"
     ):
-        nusc_path = "../experiments/nuScenes/v1.0-mini"
+        #nusc_path = "../experiments/nuScenes/v1.0-mini"
+        nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
 
@@ -837,7 +847,8 @@ if __name__ == "__main__":
     else:
         backend = "gloo"
 
-    eval(args.eval_task)(args.local_rank)
+    local_rank = int(0)
+    eval(args.eval_task)(local_rank)
     # plot_snapshot_conditioning(args.local_rank)
     # plot_snapshot(args.local_rank)
     # make_video(args.local_rank)

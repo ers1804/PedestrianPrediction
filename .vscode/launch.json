@@ -47,6 +47,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "justMyCode": false,
+            "pythonPath": "/home/erik/scept_env/bin/python",
         },
     ]
 }

@@ -7,6 +7,8 @@ import wandb
 import torch.optim as optim
 from evaluation.metrics import Metrics
 from train import Trainer
+from configs.constants import *
+import numpy as np
 
 
 @gin.configurable
@@ -31,7 +33,24 @@ class SupervisedTrainer(Trainer):
         self.optimiser = optim.Adam(self.generator.parameters(), lr=self.lr)
         self.wandb = wandb
         self.generator.to(self.device)
-
+    def map_keypoints(self, keypoints_coco):
+        """
+        Method to map keypoints from COCO format to Waymo format
+        keypoints_coco: [x1, y1, c1, ..., xk, yk, ck]
+        keypoints_waymo: array [B, num_joints, 2]
+        """
+        batch_size = gin.query_parameter('load.batch_size')
+        keypoints_waymo = torch.empty((batch_size, self.generator.num_joints, 2), dtype=torch.float32)
+        num_keypoints = len(keypoints_coco) // 3
+        arr_keypoints_coco = torch.Tensor(keypoints_coco)
+        arr_keypoints_coco = arr_keypoints_coco.reshape(-1, num_keypoints, 3)
+        sequence_coco = ["NOSE", "LEFT_EYE", "RIGHT_EYE", "LEFT_EAR", "RIGHT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP", "LEFT_KNEE", "RIGHT_KNEE", "LEFT_ANKLE", "RIGHT_ANKLE"]
+        for point in sequence_coco:
+            if point in JOINT_NAMES:
+                keypoints_waymo[:, JOINT_NAMES.index(point), :] = arr_keypoints_coco[:, sequence_coco.index(point), :2]
+            else:
+                continue
+        return keypoints_waymo
     def train(self):
         """
         Training routine
