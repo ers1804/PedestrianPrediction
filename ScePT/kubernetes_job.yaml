@@ -44,6 +44,6 @@ spec:
           claimName: dl-training-pvc
       - name: nfs-publicdatasets
         nfs:
-          server: 10.27.194.197
+          server: 10.27.215.135
           path: /volume1/publicdatasets
       hostIPC: true
