@@ -39,7 +39,7 @@ flags.DEFINE_boolean('wandb', False, "Specify if the run should be logged and se
 flags.DEFINE_string("wandb_project", "ALL", "Project name for Weights & Biases logging.")
 flags.DEFINE_string("sweep_id", "", "resume already existing wandb sweep by passing the id.")
 flags.DEFINE_list("overwrite_gin_args", "", "Overwrite gin parameters via command line. Form: 'key1,value1, key2,value2'")
-flags.DEFINE_boolean("use_alpha", False, "Use Alphapose to generate 2D keypoints during training.")
+flags.DEFINE_boolean("use_alpha", True, "Use Alphapose to generate 2D keypoints during training.")
 flags.DEFINE_string("alpha_cfg", "/home/erik/gitprojects/AlphaPose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "AlphaPose config file.")
 flags.DEFINE_string("alpha_checkpoint", "/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "AlphaPose checkpoint file.")
 
