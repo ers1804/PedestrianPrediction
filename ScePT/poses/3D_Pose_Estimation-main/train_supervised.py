@@ -20,6 +20,7 @@ from trackers.tracker_cfg import cfg as tcfg
 from alphapose.utils.detector import DetectionLoader
 from detector.apis import get_detector
 from tqdm import tqdm
+from alphapose.utils.writer import DataWriter
 
 ################
 
@@ -109,6 +110,7 @@ class SupervisedTrainer(Trainer):
                     data_len = det_loader.length
                     im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
                     batchSize = self.flags.posebatch
+                    writer = DataWriter(self.cfg, self.flags, save_video=False, queueSize=self.flags.qsize).start()
                     for _ in im_names_desc:
                         with torch.no_grad():
                             (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
@@ -132,8 +134,16 @@ class SupervisedTrainer(Trainer):
                                 hm_j = self.alpha(inps_j)
                                 hm.append(hm_j)
                             hm = torch.cat(hm)
+                            hm = hm.cpu()
+                            writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
+                    results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
+                    # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
+                    # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
+                    # TODO: Normalize keypoints using waymo normalization
                     print("2D Keypoints estimated")
-
+                    writer.stop()
+                    det_loader.stop()
+                    det_loader.terminate()
                 else:
                     keypoints_2D = data['keypoints_2D'].to(self.device)
                 keypoints_3D = data['keypoints_3D'].to(self.device)

@@ -47,10 +47,16 @@ flags.DEFINE_string("alpha_cfg", "/home/erik/gitprojects/AlphaPose/configs/halpe
 flags.DEFINE_string("alpha_checkpoint", "/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "AlphaPose checkpoint file.")
 flags.DEFINE_list("gpus", ["0"], "List of GPUs to use for AlphaPose.")
 flags.DEFINE_string("detector", "yolo", "Detector to use for AlphaPose.")
-flags.DEFINE_integer("detbatch", 5, "Batch size for AlphaPose detector.")
-flags.DEFINE_integer("qsize", 1024, "Queue size for AlphaPose detector.")
-flags.DEFINE_integer("posebatch", 64, "Batch size for AlphaPose pose estimation.")
+flags.DEFINE_integer("detbatch", 1, "Batch size for AlphaPose detector.")
+flags.DEFINE_integer("qsize", 16, "Queue size for AlphaPose detector.")
+flags.DEFINE_integer("posebatch", 16, "Batch size for AlphaPose pose estimation.")
 flags.DEFINE_boolean("sp", True, "Use single process for Pytorch (AlphaPose).")
+flags.DEFINE_boolean("tracking", False, "Use tracking for AlphaPose.")
+flags.DEFINE_boolean("save_img", False, "Save images for AlphaPose.")
+flags.DEFINE_boolean("vis", False, "Visualize images for AlphaPose.")
+flags.DEFINE_boolean("pose_flow", False, "Use pose flow for AlphaPose.")
+flags.DEFINE_boolean("pose_track", False, "Use pose track for AlphaPose.")
+flags.DEFINE_integer("min_box_area", 0, "Minimum box area for AlphaPose.")
 ################
 
 flags.register_validator('tune',
