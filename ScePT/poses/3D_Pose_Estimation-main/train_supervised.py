@@ -17,6 +17,9 @@ sys.path.append('/home/erik/gitproject/AlphaPose')
 from alphapose.models import builder
 from alphapose.utils.config import update_config
 from trackers.tracker_cfg import cfg as tcfg
+from alphapose.utils.detector import DetectionLoader
+from detector.apis import get_detector
+from tqdm import tqdm
 
 ################
 
@@ -29,7 +32,7 @@ class SupervisedTrainer(Trainer):
 
     def __init__(self, model, train_set, val_set, test_set, run_paths, epochs,
                  lr, lr_decay_factor, lr_step, loss_types={'masked_mpjpe': True},
-                 device="cpu", wandb=False, waymo_evaluation=True, alpha=False, alpha_cfg=None, alpha_checkpoint=None):
+                 device="cpu", wandb=False, waymo_evaluation=True, flags=None):
 
         super().__init__(train_set, val_set, test_set, run_paths, epochs,
                          device, wandb, waymo_evaluation,  type='supervised')
@@ -43,12 +46,14 @@ class SupervisedTrainer(Trainer):
         self.optimiser = optim.Adam(self.generator.parameters(), lr=self.lr)
         self.wandb = wandb
         self.generator.to(self.device)
-        if alpha:
-            cfg = update_config(alpha_cfg)
-            model_config = cfg.MODEL
-            data_preset = cfg.DATA_PRESET
+        self.use_alpha = flags.use_alpha
+        self.flags = flags
+        if self.use_alpha:
+            self.cfg = update_config(flags.alpha_cfg)
+            model_config = self.cfg.MODEL
+            data_preset = self.cfg.DATA_PRESET
             self.alpha = builder.build_sppe(model_config, preset_cfg=data_preset)
-            self.alpha.load_state_dict(torch.load(alpha_checkpoint, map_location=self.device))
+            self.alpha.load_state_dict(torch.load(flags.alpha_checkpoint, map_location=self.device))
             self.alpha.to(self.device)
             self.alpha.eval()
         else:
@@ -92,8 +97,45 @@ class SupervisedTrainer(Trainer):
 
                 # clear gradients
                 self.optimiser.zero_grad()
+                if self.use_alpha:
+                    det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in data['img']],
+                                                 get_detector(self.flags),
+                                                 self.cfg,
+                                                 self.flags,
+                                                 batchSize=self.flags.detbatch,
+                                                 mode='loaded_image',
+                                                 queueSize=self.flags.qsize)
+                    det_worker = det_loader.start()
+                    data_len = det_loader.length
+                    im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
+                    batchSize = self.flags.posebatch
+                    for _ in im_names_desc:
+                        with torch.no_grad():
+                            (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
+                            if orig_img is None:
+                                # TODO: Decide, what to do in this case!
+                                break
+                            if boxes is None or boxes.nelement() == 0:
+                                print('No Human Detected')
+                                # TODO: Decide, what to do in this case!
+                                continue
+                            # Pose Estimation
+                            inps = inps.to(self.device)
+                            datalen = inps.size(0)
+                            leftover = 0
+                            if (datalen) % batchSize:
+                                leftover = 1
+                            num_batches = datalen // batchSize + leftover
+                            hm = []
+                            for j in range(num_batches):
+                                inps_j = inps[j * batchSize:min((j + 1) * batchSize, datalen)]
+                                hm_j = self.alpha(inps_j)
+                                hm.append(hm_j)
+                            hm = torch.cat(hm)
+                    print("2D Keypoints estimated")
 
-                keypoints_2D = data['keypoints_2D'].to(self.device)
+                else:
+                    keypoints_2D = data['keypoints_2D'].to(self.device)
                 keypoints_3D = data['keypoints_3D'].to(self.device)
                 pc = data['pc'].to(self.device).transpose(2, 1)
 

@@ -39,9 +39,19 @@ flags.DEFINE_boolean('wandb', False, "Specify if the run should be logged and se
 flags.DEFINE_string("wandb_project", "ALL", "Project name for Weights & Biases logging.")
 flags.DEFINE_string("sweep_id", "", "resume already existing wandb sweep by passing the id.")
 flags.DEFINE_list("overwrite_gin_args", "", "Overwrite gin parameters via command line. Form: 'key1,value1, key2,value2'")
+
+# AlphaPose
+################
 flags.DEFINE_boolean("use_alpha", True, "Use Alphapose to generate 2D keypoints during training.")
 flags.DEFINE_string("alpha_cfg", "/home/erik/gitprojects/AlphaPose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "AlphaPose config file.")
 flags.DEFINE_string("alpha_checkpoint", "/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "AlphaPose checkpoint file.")
+flags.DEFINE_list("gpus", ["0"], "List of GPUs to use for AlphaPose.")
+flags.DEFINE_string("detector", "yolo", "Detector to use for AlphaPose.")
+flags.DEFINE_integer("detbatch", 5, "Batch size for AlphaPose detector.")
+flags.DEFINE_integer("qsize", 1024, "Queue size for AlphaPose detector.")
+flags.DEFINE_integer("posebatch", 64, "Batch size for AlphaPose pose estimation.")
+flags.DEFINE_boolean("sp", True, "Use single process for Pytorch (AlphaPose).")
+################
 
 flags.register_validator('tune',
                          lambda value: value.lower() in ['', 'waymo_alphapose_weakly_supervised', 'waymo_3d_2d_projections_supervised', 'waymo_3d_lidar_supervised', 'waymo_2d_labels_supervised', 'waymo_weakly_supervised'],
@@ -155,7 +165,7 @@ def supervised(FLAGS, run_paths, load_model):
     elif FLAGS.run.lower() == "all":
         # train
         trainer = SupervisedTrainer(model, ds_train, ds_val, ds_test, run_paths,
-                                    device=FLAGS.device, wandb=FLAGS.wandb, alpha=FLAGS.use_alpha, alpha_cfg=FLAGS.alpha_cfg, alpha_checkpoint=FLAGS.alpha_checkpoint)
+                                    device=FLAGS.device, wandb=FLAGS.wandb, flags=FLAGS)
         model = trainer.train()
         # eval
         utils_misc.set_loggers(run_paths['path_logs_eval'], logging.INFO, del_prev_handler=True)

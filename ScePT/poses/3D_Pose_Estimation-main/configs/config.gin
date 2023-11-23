@@ -3,7 +3,7 @@
 ### DATASET ###
 ###############
 load.data_src = "/home/erik/ssd2/datasets/waymo_pose/"
-load.batch_size = 32
+load.batch_size = 16
 
 WaymoOpenDataset.pc_min_size = 75
 WaymoOpenDataset.min_2D_keypoints = 7
