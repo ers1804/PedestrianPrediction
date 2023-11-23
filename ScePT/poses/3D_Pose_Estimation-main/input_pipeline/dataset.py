@@ -7,21 +7,23 @@ from torch.utils.data import DataLoader
 from torch.utils import data as torch_data
 from input_pipeline.waymo_dataloader import WaymoOpenDataset
 from input_pipeline.transforms import NormalizeKeypoints2D, NormalizeKeypoints3D, NormalizePointCloud
+from torch.utils.data._utils.collate import default_collate
 
 
 def load_main_3D_data(data_src, name, train_factor, test_factor, val_factor, alpha_pose=False):
     # get 3D_2D data available
     waymo_csv = data_src + "3D_2D/" + "image_segment_relations.csv"
+    image_path = data_src + "3D_2D/" + "images/"
     waymo_labels = data_src + "3D_2D/" + "labels.pkl"
     if alpha_pose:
         logging.info("Using 2D Alpha Pose Labels...")
         waymo_labels = data_src + "alpha_pose/" + "3D_2D_ap.pkl"
         logging.info("Overwriting gin.config arguements with standard ones: pc_min_size=20, min_2D_keypoints=7, lidar_projection_ratio=0.5")
         waymo_data = WaymoOpenDataset(waymo_csv, waymo_labels, name, pc_min_size=20, min_2D_keypoints=7, lidar_projection_ratio=0.5,
-                                      transform_kp_2D=NormalizeKeypoints2D(), )  # , transform_kp_3D=NormalizeKeypoints3D())
+                                      transform_kp_2D=NormalizeKeypoints2D(), image_path=image_path)  # , transform_kp_3D=NormalizeKeypoints3D())
 
     else:
-        waymo_data = WaymoOpenDataset(waymo_csv, waymo_labels, name, transform_kp_2D=NormalizeKeypoints2D())  # , transform_kp_3D=NormalizeKeypoints3D())
+        waymo_data = WaymoOpenDataset(waymo_csv, waymo_labels, name, transform_kp_2D=NormalizeKeypoints2D(), image_path=image_path)  # , transform_kp_3D=NormalizeKeypoints3D())
 
     train_size = round(train_factor * len(waymo_data))
     test_size = round(test_factor * len(waymo_data))
@@ -34,6 +36,29 @@ def load_main_3D_data(data_src, name, train_factor, test_factor, val_factor, alp
 
     return train_data, test_data, val_data
 
+
+def custom_collate_alpha(batch):
+    """
+    Custom collate function to handle the alpha pose dataset
+    Args:
+        batch (list): list of samples
+    Returns:
+        batch (list): list of samples
+    """
+    # Assuming each element in the batch is a dictionary
+    collated_batch = {}
+    images = []
+    # Initialize the collation process
+    for key in batch[0]:
+        collated_batch[key] = []
+
+    # Iterate through each item in the batch
+    for item in batch:
+        images.append(torch.from_numpy(item.pop('img')))
+
+    # Batch the other items found in the dictionary
+    batched_dict = default_collate(batch)
+    return {'img': images, **batched_dict}
 
 @gin.configurable
 def load(data_src, batch_size, name):
@@ -84,9 +109,9 @@ def load(data_src, batch_size, name):
         logging.info(f' Val dataset size: {len(val_data)}')
         logging.info(f' Test dataset size: {len(test_data)}')
 
-        train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=0)
-        test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=False)
-        val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+        train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=custom_collate_alpha)
+        test_dataloader = DataLoader(test_data, batch_size=len(test_data), shuffle=False, collate_fn=custom_collate_alpha)
+        val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=custom_collate_alpha)
 
         return train_dataloader, test_dataloader, val_dataloader
 

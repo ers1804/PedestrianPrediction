@@ -22,7 +22,7 @@ class WaymoOpenDataset(Dataset):
     """Custom Waymo Dataset"""
 
     def __init__(self, csv, labels, name, pc_min_size, min_2D_keypoints, alpha_pose_confidence_score=0.6, num_closest_cp=4, lidar_projection_ratio=0.8,
-                 weakly_supervised=False, transform_kp_2D=None, transform_kp_3D=None, transform_pc=None, rm_no_hips=True):
+                 weakly_supervised=False, transform_kp_2D=None, transform_kp_3D=None, transform_pc=None, rm_no_hips=True, image_path=None):
         """
         Args:
             csv (df): pandas df that stores information about the sample (id, frame, tfr-file, etc.)
@@ -50,6 +50,7 @@ class WaymoOpenDataset(Dataset):
         self.image_path = "/".join(csv.split('/')[:-1]) + "/images/"
         self.weakly_supervised = weakly_supervised
         self.alpha_pose_confidence_score = alpha_pose_confidence_score
+        self.image_path = image_path
 
         # if self.name == "waymo_alphapose_weakly_supervised":
         #     logging.info("CURRENTLY ONLY USING LABELS THAT ARE ALSO LABELeD IN 2D AND NOT ALL DETECTIONS AVAILABALE IN THE DATASET")
@@ -88,6 +89,9 @@ class WaymoOpenDataset(Dataset):
         # get item from file
         key = self.csv.iloc[idx].image_id
         data = self.labels[key]
+
+        # Load image for corresponding sample
+        img = cv2.imread(self.image_path + key + ".jpg")
 
         bb_2d = np.array(list(data['bb_2d'].values()))
         bb_3d = np.array(list(data['bb_3d'].values()))
@@ -134,12 +138,12 @@ class WaymoOpenDataset(Dataset):
             return {'keypoints_2D': keypoints_2D.astype('float32'), 'mask_2D': mask_2D, 'pc': pc.astype('float32'), 'occlusions_2D': occlusions_2D,
                     'keypoints_3D': keypoints_3D, 'occlusions_3D': occlusions_3D, 'mask_3D': mask_3D, 'keypoints_2D_unnormalized': keypoints_2D_unnormalized,
                     'closest_cp_idx': closest_cp_idx_resampled, 'closest_cp_dist': closest_cp_dist, 'closest_cp_idx_before_resampling': closest_cp_idx, 'root': root,
-                    'intrinsics': intrinsics, 'metadata': data['metadata'], 'bb_2d': bb_2d, 'bb_3d': bb_3d, 'idx': idx, 'key': key}
+                    'intrinsics': intrinsics, 'metadata': data['metadata'], 'bb_2d': bb_2d, 'bb_3d': bb_3d, 'idx': idx, 'key': key, 'img': img}
         else:
             pc, closest_cp_idx = self.get_sampled_pc(data, root, mask_2D)
 
             return {'keypoints_2D': keypoints_2D.astype('float32'), 'keypoints_3D': keypoints_3D.astype('float32'), 'pc': pc.astype('float32'), 'occlusions_2D': occlusions_2D,  'intrinsics': intrinsics,
-                    'occlusions_3D': occlusions_3D, 'mask_2D': mask_2D, 'mask_3D': mask_3D, 'bb_2d': bb_2d, 'bb_3d': bb_3d, 'idx': idx, 'metadata': data['metadata'], 'root': root, }
+                    'occlusions_3D': occlusions_3D, 'mask_2D': mask_2D, 'mask_3D': mask_3D, 'bb_2d': bb_2d, 'bb_3d': bb_3d, 'idx': idx, 'metadata': data['metadata'], 'root': root, 'img': img}
 
     def process_kp_data(self, data, key):
 
