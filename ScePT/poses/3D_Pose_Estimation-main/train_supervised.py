@@ -140,6 +140,7 @@ class SupervisedTrainer(Trainer):
                     # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
                     # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
                     # TODO: Normalize keypoints using waymo normalization
+                    # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
                     print("2D Keypoints estimated")
                     writer.stop()
                     det_loader.stop()
