@@ -21,6 +21,26 @@ from alphapose.utils.detector import DetectionLoader
 from detector.apis import get_detector
 from tqdm import tqdm
 from alphapose.utils.writer import DataWriter
+#from input_pipeline.transforms import NormalizeKeypoints2D
+
+
+def normalize_keypoints2D_batch(keypoint_batch, epsilon=1e-6):
+    max_values = torch.max(keypoint_batch, dim=1).values
+    min_values = torch.min(keypoint_batch, dim=1).values
+
+    height = max_values[:, 1] - min_values[:, 1]
+    width = max_values[:, 0] - min_values[:, 0]
+
+    keypoint_batch_zz = keypoint_batch.transpose(0, 1) - min_values
+
+    keypoint_batch_trans = keypoint_batch_zz.transpose(1, 2)
+
+    # norm height [-1,1]
+    norm_kp = (keypoint_batch_trans/(height+epsilon))*2
+    norm_kp[:, 0, :] = norm_kp[:, 0, :] - width/(height+epsilon)
+    norm_kp[:, 1, :] = norm_kp[:, 1, :] - 1
+
+    return norm_kp.permute(2, 0, 1)
 
 ################
 
@@ -66,14 +86,14 @@ class SupervisedTrainer(Trainer):
         keypoints_waymo: array [B, num_joints, 2]
         """
         batch_size = gin.query_parameter('load.batch_size')
-        keypoints_waymo = torch.empty((batch_size, self.generator.num_joints, 2), dtype=torch.float32)
-        num_keypoints = len(keypoints_coco) // 3
-        arr_keypoints_coco = torch.Tensor(keypoints_coco)
-        arr_keypoints_coco = arr_keypoints_coco.reshape(-1, num_keypoints, 3)
+        keypoints_waymo = torch.zeros((keypoints_coco.shape[0], self.generator.num_joints, 2), dtype=torch.float32)
+        #num_keypoints = len(keypoints_coco) // 3
+        #arr_keypoints_coco = torch.Tensor(keypoints_coco)
+        #arr_keypoints_coco = arr_keypoints_coco.reshape(-1, num_keypoints, 3)
         sequence_coco = ["NOSE", "LEFT_EYE", "RIGHT_EYE", "LEFT_EAR", "RIGHT_EAR", "LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW", "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HIP", "RIGHT_HIP", "LEFT_KNEE", "RIGHT_KNEE", "LEFT_ANKLE", "RIGHT_ANKLE"]
         for point in sequence_coco:
             if point in JOINT_NAMES:
-                keypoints_waymo[:, JOINT_NAMES.index(point), :] = arr_keypoints_coco[:, sequence_coco.index(point), :2]
+                keypoints_waymo[:, JOINT_NAMES.index(point), :] = keypoints_coco[:, sequence_coco.index(point), :2]
             else:
                 continue
         return keypoints_waymo
@@ -99,56 +119,85 @@ class SupervisedTrainer(Trainer):
                 # clear gradients
                 self.optimiser.zero_grad()
                 if self.use_alpha:
-                    det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in data['img']],
-                                                 get_detector(self.flags),
-                                                 self.cfg,
-                                                 self.flags,
-                                                 batchSize=self.flags.detbatch,
-                                                 mode='loaded_image',
-                                                 queueSize=self.flags.qsize)
-                    det_worker = det_loader.start()
-                    data_len = det_loader.length
-                    im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
-                    batchSize = self.flags.posebatch
-                    writer = DataWriter(self.cfg, self.flags, save_video=False, queueSize=self.flags.qsize).start()
-                    for _ in im_names_desc:
-                        with torch.no_grad():
-                            (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
-                            if orig_img is None:
-                                # TODO: Decide, what to do in this case!
-                                break
-                            if boxes is None or boxes.nelement() == 0:
-                                print('No Human Detected')
-                                # TODO: Decide, what to do in this case!
-                                continue
-                            # Pose Estimation
-                            inps = inps.to(self.device)
-                            datalen = inps.size(0)
-                            leftover = 0
-                            if (datalen) % batchSize:
-                                leftover = 1
-                            num_batches = datalen // batchSize + leftover
-                            hm = []
-                            for j in range(num_batches):
-                                inps_j = inps[j * batchSize:min((j + 1) * batchSize, datalen)]
-                                hm_j = self.alpha(inps_j)
-                                hm.append(hm_j)
-                            hm = torch.cat(hm)
-                            hm = hm.cpu()
-                            writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
-                    results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
-                    # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
-                    # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
-                    # TODO: Normalize keypoints using waymo normalization
-                    # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
-                    print("2D Keypoints estimated")
-                    writer.stop()
-                    det_loader.stop()
-                    det_loader.terminate()
+                    with torch.no_grad():
+                        det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in data['img']],
+                                                    get_detector(self.flags),
+                                                    self.cfg,
+                                                    self.flags,
+                                                    batchSize=self.flags.detbatch,
+                                                    mode='loaded_image',
+                                                    queueSize=self.flags.qsize)
+                        det_worker = det_loader.start()
+                        data_len = det_loader.length
+                        #im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
+                        batchSize = self.flags.posebatch
+                        writer = DataWriter(self.cfg, self.flags, save_video=False, queueSize=self.flags.qsize).start()
+                        # If AlphaPose cannot find any humans in the image, use groundtruth keypoints
+                        indices_wo_detection = []
+                        indices_w_detection = []
+                        for i in range(data_len):
+                            with torch.no_grad():
+                                (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
+                                if orig_img is None:
+                                    # TODO: Decide, what to do in this case!
+                                    break
+                                if boxes is None or boxes.nelement() == 0:
+                                    print('No Human Detected')
+                                    # TODO: Decide, what to do in this case!
+                                    indices_wo_detection.append(i)
+                                    continue
+                                # Pose Estimation
+                                indices_w_detection.append(i)
+                                inps = inps.to(self.device)
+                                datalen = inps.size(0)
+                                leftover = 0
+                                if (datalen) % batchSize:
+                                    leftover = 1
+                                num_batches = datalen // batchSize + leftover
+                                hm = []
+                                for j in range(num_batches):
+                                    inps_j = inps[j * batchSize:min((j + 1) * batchSize, datalen)]
+                                    hm_j = self.alpha(inps_j)
+                                    hm.append(hm_j)
+                                hm = torch.cat(hm)
+                                hm = hm.cpu()
+                                writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
+                        results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
+                        writer.clear_queues()
+                        #print("2D Keypoints estimated")
+                        #writer.terminate()
+                        det_loader.stop()
+                        det_loader.terminate()
+                        # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
+                        # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
+                        # TODO: Normalize keypoints using waymo normalization
+                        # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
+                        # First filter keypoints to the ones you want then normalize using the re-implemented function
+                        # Output should be a tensor of shape [batch_size, num_joints, 2]
+                        # Batch the keypoints to tensor
+                        batch_size = gin.query_parameter('load.batch_size')
+                        parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], 68, 2), dtype=torch.float32)
+                        for i, sample in enumerate(results):
+                            index = indices_w_detection[i]
+                            if len(sample['result']) == 0:
+                                indices_wo_detection.append(index)
+                            else:
+                                parsed_keypoints[index] = sample['result'][0]['keypoints']
+                        # Map Keypoints
+                        keypoints_2D = self.map_keypoints(parsed_keypoints)
+                        # Normalize Keypoints
+                        keypoints_2D = normalize_keypoints2D_batch(keypoints_2D).to(self.device)
+                        #print("Keypoints Normalized")
+                        # Add groundtruth keypoints for samples without detection
+                        for i in indices_wo_detection:
+                            keypoints_2D[i] = data['keypoints_2D'][i]
                 else:
                     keypoints_2D = data['keypoints_2D'].to(self.device)
                 keypoints_3D = data['keypoints_3D'].to(self.device)
                 pc = data['pc'].to(self.device).transpose(2, 1)
+
+                if pc.shape[0] != keypoints_2D.shape[0]:
+                    print("Different batch sizes for pc and keypoints_2D.")
 
                 # forward pass
                 if self.generator.type == "point_cloud":
@@ -196,12 +245,88 @@ class SupervisedTrainer(Trainer):
         """Validation procedure of the supervised training routine"""
 
         step_losses = []
+        torch.cuda.empty_cache()
+        #print(torch.cuda.memory_summary())
 
         with torch.no_grad():
             self.generator.eval()
             for data in self.val_set:
                 batch_dim = data['keypoints_2D'].shape[0]
-                keypoints_2D = data['keypoints_2D'].to(self.device)
+
+                if self.use_alpha:
+                    det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in data['img']],
+                                                 get_detector(self.flags),
+                                                 self.cfg,
+                                                 self.flags,
+                                                 batchSize=self.flags.detbatch,
+                                                 mode='loaded_image',
+                                                 queueSize=self.flags.qsize)
+                    det_worker = det_loader.start()
+                    data_len = det_loader.length
+                    #im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
+                    batchSize = self.flags.posebatch
+                    writer = DataWriter(self.cfg, self.flags, save_video=False, queueSize=self.flags.qsize).start()
+                    # If AlphaPose cannot find any humans in the image, use groundtruth keypoints
+                    indices_wo_detection = []
+                    indices_w_detection = []
+                    for i in range(data_len):
+                        (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
+                        if orig_img is None:
+                            # TODO: Decide, what to do in this case!
+                            break
+                        if boxes is None or boxes.nelement() == 0:
+                            print('No Human Detected')
+                            # TODO: Decide, what to do in this case!
+                            indices_wo_detection.append(i)
+                            continue
+                        # Pose Estimation
+                        indices_w_detection.append(i)
+                        inps = inps.to(self.device)
+                        datalen = inps.size(0)
+                        leftover = 0
+                        if (datalen) % batchSize:
+                            leftover = 1
+                        num_batches = datalen // batchSize + leftover
+                        hm = []
+                        for j in range(num_batches):
+                            inps_j = inps[j * batchSize:min((j + 1) * batchSize, datalen)]
+                            hm_j = self.alpha(inps_j)
+                            hm.append(hm_j)
+                        hm = torch.cat(hm)
+                        hm = hm.cpu()
+                        writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
+                    results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
+                    writer.clear_queues()
+                    #print("2D Keypoints estimated")
+                    #writer.terminate()
+                    det_loader.stop()
+                    det_loader.terminate()
+                    # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
+                    # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
+                    # TODO: Normalize keypoints using waymo normalization
+                    # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
+                    # First filter keypoints to the ones you want then normalize using the re-implemented function
+                    # Output should be a tensor of shape [batch_size, num_joints, 2]
+                    # Batch the keypoints to tensor
+                    batch_size = gin.query_parameter('load.batch_size')
+                    parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], 68, 2), dtype=torch.float32)
+                    for i, sample in enumerate(results):
+                        index = indices_w_detection[i]
+                        if len(sample['result']) == 0:
+                            indices_wo_detection.append(index)
+                        else:
+                            parsed_keypoints[index] = sample['result'][0]['keypoints']
+                    # Map Keypoints
+                    keypoints_2D = self.map_keypoints(parsed_keypoints)
+                    # Normalize Keypoints
+                    keypoints_2D = normalize_keypoints2D_batch(keypoints_2D).to(self.device)
+                    #print("Keypoints Normalized")
+                    # Add groundtruth keypoints for samples without detection
+                    for i in indices_wo_detection:
+                        keypoints_2D[i] = data['keypoints_2D'][i]
+                else:
+                    keypoints_2D = data['keypoints_2D'].to(self.device)
+                
                 keypoints_3D = data['keypoints_3D'].to(self.device)
                 pc = data['pc'].to(self.device).transpose(2, 1)
 
@@ -225,7 +350,7 @@ class SupervisedTrainer(Trainer):
                 self.push_wandb()
             self.previous_losses.append(self.train_loss)
             sys.stdout.flush()
-            self.generator.train()
+        self.generator.train()
 
     def push_wandb(self):
         """Push all data to Weights and Biases."""
