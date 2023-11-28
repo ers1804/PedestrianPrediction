@@ -173,7 +173,6 @@ class SupervisedTrainer(Trainer):
                         # First filter keypoints to the ones you want then normalize using the re-implemented function
                         # Output should be a tensor of shape [batch_size, num_joints, 2]
                         # Batch the keypoints to tensor
-                        batch_size = gin.query_parameter('load.batch_size')
                         parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], self.cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
                         for i, sample in enumerate(results):
                             index = indices_w_detection[i]
@@ -305,7 +304,6 @@ class SupervisedTrainer(Trainer):
                     # First filter keypoints to the ones you want then normalize using the re-implemented function
                     # Output should be a tensor of shape [batch_size, num_joints, 2]
                     # Batch the keypoints to tensor
-                    batch_size = gin.query_parameter('load.batch_size')
                     parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], self.cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
                     for i, sample in enumerate(results):
                         index = indices_w_detection[i]
