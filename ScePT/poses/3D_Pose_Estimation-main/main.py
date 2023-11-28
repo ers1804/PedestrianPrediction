@@ -177,7 +177,7 @@ def supervised(FLAGS, run_paths, load_model):
         utils_misc.set_loggers(run_paths['path_logs_eval'], logging.INFO, del_prev_handler=True)
         trainer.eval(reload_best_model=True)
         # vis results
-        trainer = SupervisedTrainer(model, ds_train, ds_val, ds_test, run_paths)
+        trainer = SupervisedTrainer(model, ds_train, ds_val, ds_test, run_paths, flags=FLAGS)
         visualizer = Visualizer(trainer, FLAGS.dataset)
         visualizer.vis_samples()
         # visualizer.vis_complete_images()

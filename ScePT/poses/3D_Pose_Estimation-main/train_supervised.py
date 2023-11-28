@@ -67,7 +67,10 @@ class SupervisedTrainer(Trainer):
         self.optimiser = optim.Adam(self.generator.parameters(), lr=self.lr)
         self.wandb = wandb
         self.generator.to(self.device)
-        self.use_alpha = flags.use_alpha
+        if flags is not None:
+            self.use_alpha = flags.use_alpha
+        else:
+            self.use_alpha = False
         self.flags = flags
         if self.use_alpha:
             self.cfg = update_config(flags.alpha_cfg)
