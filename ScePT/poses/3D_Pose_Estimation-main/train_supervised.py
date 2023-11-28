@@ -165,7 +165,7 @@ class SupervisedTrainer(Trainer):
                         results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
                         writer.clear_queues()
                         #print("2D Keypoints estimated")
-                        #writer.terminate()
+                        writer.stop()
                         det_loader.stop()
                         det_loader.terminate()
                         # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
@@ -176,7 +176,7 @@ class SupervisedTrainer(Trainer):
                         # Output should be a tensor of shape [batch_size, num_joints, 2]
                         # Batch the keypoints to tensor
                         batch_size = gin.query_parameter('load.batch_size')
-                        parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], 68, 2), dtype=torch.float32)
+                        parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], self.cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
                         for i, sample in enumerate(results):
                             index = indices_w_detection[i]
                             if len(sample['result']) == 0:
@@ -296,9 +296,10 @@ class SupervisedTrainer(Trainer):
                         hm = hm.cpu()
                         writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
                     results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
-                    writer.clear_queues()
                     #print("2D Keypoints estimated")
                     #writer.terminate()
+                    writer.clear_queues()
+                    writer.stop()
                     det_loader.stop()
                     det_loader.terminate()
                     # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
@@ -309,7 +310,7 @@ class SupervisedTrainer(Trainer):
                     # Output should be a tensor of shape [batch_size, num_joints, 2]
                     # Batch the keypoints to tensor
                     batch_size = gin.query_parameter('load.batch_size')
-                    parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], 68, 2), dtype=torch.float32)
+                    parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], self.cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
                     for i, sample in enumerate(results):
                         index = indices_w_detection[i]
                         if len(sample['result']) == 0:
