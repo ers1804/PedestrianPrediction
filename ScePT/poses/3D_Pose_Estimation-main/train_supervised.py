@@ -143,7 +143,7 @@ class SupervisedTrainer(Trainer):
                                     break
                                 if boxes is None or boxes.nelement() == 0:
                                     print('No Human Detected')
-                                    # TODO: Decide, what to do in this case!
+                                    # Save indices and add groundtruth keypoints later
                                     indices_wo_detection.append(i)
                                     continue
                                 # Pose Estimation
@@ -170,8 +170,6 @@ class SupervisedTrainer(Trainer):
                         det_loader.terminate()
                         # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
                         # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
-                        # TODO: Normalize keypoints using waymo normalization
-                        # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
                         # First filter keypoints to the ones you want then normalize using the re-implemented function
                         # Output should be a tensor of shape [batch_size, num_joints, 2]
                         # Batch the keypoints to tensor
@@ -276,7 +274,7 @@ class SupervisedTrainer(Trainer):
                             break
                         if boxes is None or boxes.nelement() == 0:
                             print('No Human Detected')
-                            # TODO: Decide, what to do in this case!
+                            # Save indices and add groundtruth keypoints later
                             indices_wo_detection.append(i)
                             continue
                         # Pose Estimation
@@ -304,8 +302,6 @@ class SupervisedTrainer(Trainer):
                     det_loader.terminate()
                     # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
                     # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
-                    # TODO: Normalize keypoints using waymo normalization
-                    # TODO: Check out how keypoints are visualized in AlphaPose to figure out which keypoints are what
                     # First filter keypoints to the ones you want then normalize using the re-implemented function
                     # Output should be a tensor of shape [batch_size, num_joints, 2]
                     # Batch the keypoints to tensor
