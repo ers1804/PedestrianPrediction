@@ -11,6 +11,15 @@ import evaluation.metrics_waymo as metrics_waymo
 
 from configs.constants import JOINT_NAMES
 
+# AlphaPose
+from alphapose.utils.config import update_config
+from alphapose.models import builder
+from trackers.tracker_cfg import cfg as tcfg
+from alphapose.utils.detector import DetectionLoader
+from detector.apis import get_detector
+from alphapose.utils.writer import DataWriter
+from train_supervised import normalize_keypoints2D_batch
+
 
 class Trainer(ABC):
     """
@@ -24,7 +33,7 @@ class Trainer(ABC):
     JOINT_NAMES = JOINT_NAMES
 
     def __init__(self, train_set, val_set, test_set, run_paths, epochs,
-                 device, wandb, waymo_evaluation, type):
+                 device, wandb, waymo_evaluation, flags, type):
 
         # type should be either 'supervised' or 'weakly_supervised'
         self.type = type.lower()
@@ -48,6 +57,22 @@ class Trainer(ABC):
         self.val_loss = np.inf
         self.train_loss = np.inf
         self.test_loss = np.inf
+
+        if flags is not None:
+            self.use_alpha = flags.use_alpha
+        else:
+            self.use_alpha = False
+        self.flags = flags
+        if self.use_alpha:
+            self.cfg = update_config(flags.alpha_cfg)
+            model_config = self.cfg.MODEL
+            data_preset = self.cfg.DATA_PRESET
+            self.alpha = builder.build_sppe(model_config, preset_cfg=data_preset)
+            self.alpha.load_state_dict(torch.load(flags.alpha_checkpoint, map_location=self.device))
+            self.alpha.to(self.device)
+            self.alpha.eval()
+        else:
+            self.alpha = None
 
     @abstractmethod
     def train(self):
@@ -86,6 +111,7 @@ class Trainer(ABC):
 
         self.device = 'cpu'
         self.generator.to(self.device)
+        self.alpha.to(self.device)
 
         logging.info(f'Testing data is stored in {self.run_paths["path_logs_eval"]}')
         load_dir = self.run_paths['path_ckpts_train'] + "/best_model"
@@ -106,8 +132,79 @@ class Trainer(ABC):
             mpjpes_per_joint = []
 
             for data in self.test_set:
+                if self.use_alpha:
+                    det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in data['img']],
+                                                    get_detector(self.flags),
+                                                    self.cfg,
+                                                    self.flags,
+                                                    batchSize=self.flags.detbatch,
+                                                    mode='loaded_image',
+                                                    queueSize=self.flags.qsize)
+                    det_worker = det_loader.start()
+                    data_len = det_loader.length
+                    #im_names_desc = tqdm(range(data_len), dynamic_ncols=True)
+                    batchSize = self.flags.posebatch
+                    writer = DataWriter(self.cfg, self.flags, save_video=False, queueSize=self.flags.qsize).start()
+                    # If AlphaPose cannot find any humans in the image, use groundtruth keypoints
+                    indices_wo_detection = []
+                    indices_w_detection = []
+                    for i in range(data_len):
+                        with torch.no_grad():
+                            (inps, orig_img, im_name, boxes, scores, ids, cropped_boxes) = det_loader.read()
+                            if orig_img is None:
+                                # TODO: Decide, what to do in this case!
+                                break
+                            if boxes is None or boxes.nelement() == 0:
+                                print('No Human Detected')
+                                # Save indices and add groundtruth keypoints later
+                                indices_wo_detection.append(i)
+                                continue
+                            # Pose Estimation
+                            indices_w_detection.append(i)
+                            inps = inps.to(self.device)
+                            datalen = inps.size(0)
+                            leftover = 0
+                            if (datalen) % batchSize:
+                                leftover = 1
+                            num_batches = datalen // batchSize + leftover
+                            hm = []
+                            for j in range(num_batches):
+                                inps_j = inps[j * batchSize:min((j + 1) * batchSize, datalen)]
+                                hm_j = self.alpha(inps_j)
+                                hm.append(hm_j)
+                            hm = torch.cat(hm)
+                            hm = hm.cpu()
+                            writer.save(boxes, scores, ids, hm, cropped_boxes, orig_img, im_name)
+                    results = writer.results() # List of dictionaries containing: {'imgname': 'x.jpg', 'result': dict_with_results}
+                    writer.clear_queues()
+                    #print("2D Keypoints estimated")
+                    writer.stop()
+                    det_loader.stop()
+                    det_loader.terminate()
+                    # dict_with_results is a list containing dictionaries (length of one as we only have one person in the image)
+                    # with {'keypoints': [68,2], 'kp_score': [68,1], 'proposal_score': [1,], 'idx': [1,], box': [4]}
+                    # First filter keypoints to the ones you want then normalize using the re-implemented function
+                    # Output should be a tensor of shape [batch_size, num_joints, 2]
+                    # Batch the keypoints to tensor
+                    parsed_keypoints = torch.zeros((data['keypoints_2D'].shape[0], self.cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
+                    for i, sample in enumerate(results):
+                        index = indices_w_detection[i]
+                        if len(sample['result']) == 0:
+                            indices_wo_detection.append(index)
+                        else:
+                            parsed_keypoints[index] = sample['result'][0]['keypoints']
+                    # Map Keypoints
+                    keypoints_2D = self.map_keypoints(parsed_keypoints)
+                    # Normalize Keypoints
+                    keypoints_2D = normalize_keypoints2D_batch(keypoints_2D).to(self.device)
+                    #print("Keypoints Normalized")
+                    # Add groundtruth keypoints for samples without detection
+                    for i in indices_wo_detection:
+                        keypoints_2D[i] = data['keypoints_2D'][i]
+                else:
+                    keypoints_2D = data['keypoints_2D'].to(self.device)
                 batch_dim = data['keypoints_2D'].shape[0]
-                keypoints_2D = data['keypoints_2D'].to(self.device)
+                #keypoints_2D = data['keypoints_2D'].to(self.device)
                 keypoints_3D = data['keypoints_3D'].to(self.device)
 
                 pc = data['pc'].to(self.device).transpose(2, 1)

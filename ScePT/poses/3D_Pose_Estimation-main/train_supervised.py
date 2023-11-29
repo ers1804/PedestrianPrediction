@@ -19,7 +19,7 @@ from alphapose.utils.config import update_config
 from trackers.tracker_cfg import cfg as tcfg
 from alphapose.utils.detector import DetectionLoader
 from detector.apis import get_detector
-from tqdm import tqdm
+#from tqdm import tqdm
 from alphapose.utils.writer import DataWriter
 #from input_pipeline.transforms import NormalizeKeypoints2D
 
@@ -56,7 +56,7 @@ class SupervisedTrainer(Trainer):
                  device="cpu", wandb=False, waymo_evaluation=True, flags=None):
 
         super().__init__(train_set, val_set, test_set, run_paths, epochs,
-                         device, wandb, waymo_evaluation,  type='supervised')
+                         device, wandb, waymo_evaluation,  flags, type='supervised')
 
         self.lr = lr
         self.lr_decay_factor = lr_decay_factor
@@ -67,21 +67,21 @@ class SupervisedTrainer(Trainer):
         self.optimiser = optim.Adam(self.generator.parameters(), lr=self.lr)
         self.wandb = wandb
         self.generator.to(self.device)
-        if flags is not None:
-            self.use_alpha = flags.use_alpha
-        else:
-            self.use_alpha = False
-        self.flags = flags
-        if self.use_alpha:
-            self.cfg = update_config(flags.alpha_cfg)
-            model_config = self.cfg.MODEL
-            data_preset = self.cfg.DATA_PRESET
-            self.alpha = builder.build_sppe(model_config, preset_cfg=data_preset)
-            self.alpha.load_state_dict(torch.load(flags.alpha_checkpoint, map_location=self.device))
-            self.alpha.to(self.device)
-            self.alpha.eval()
-        else:
-            self.alpha = None
+        # if flags is not None:
+        #     self.use_alpha = flags.use_alpha
+        # else:
+        #     self.use_alpha = False
+        # self.flags = flags
+        # if self.use_alpha:
+        #     self.cfg = update_config(flags.alpha_cfg)
+        #     model_config = self.cfg.MODEL
+        #     data_preset = self.cfg.DATA_PRESET
+        #     self.alpha = builder.build_sppe(model_config, preset_cfg=data_preset)
+        #     self.alpha.load_state_dict(torch.load(flags.alpha_checkpoint, map_location=self.device))
+        #     self.alpha.to(self.device)
+        #     self.alpha.eval()
+        # else:
+        #     self.alpha = None
     def map_keypoints(self, keypoints_coco):
         """
         Method to map keypoints from COCO format to Waymo format
