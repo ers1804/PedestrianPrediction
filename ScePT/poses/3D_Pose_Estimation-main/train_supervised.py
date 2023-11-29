@@ -22,25 +22,26 @@ from detector.apis import get_detector
 #from tqdm import tqdm
 from alphapose.utils.writer import DataWriter
 #from input_pipeline.transforms import NormalizeKeypoints2D
+from train import normalize_keypoints2D_batch
 
 
-def normalize_keypoints2D_batch(keypoint_batch, epsilon=1e-6):
-    max_values = torch.max(keypoint_batch, dim=1).values
-    min_values = torch.min(keypoint_batch, dim=1).values
+# def normalize_keypoints2D_batch(keypoint_batch, epsilon=1e-6):
+#     max_values = torch.max(keypoint_batch, dim=1).values
+#     min_values = torch.min(keypoint_batch, dim=1).values
 
-    height = max_values[:, 1] - min_values[:, 1]
-    width = max_values[:, 0] - min_values[:, 0]
+#     height = max_values[:, 1] - min_values[:, 1]
+#     width = max_values[:, 0] - min_values[:, 0]
 
-    keypoint_batch_zz = keypoint_batch.transpose(0, 1) - min_values
+#     keypoint_batch_zz = keypoint_batch.transpose(0, 1) - min_values
 
-    keypoint_batch_trans = keypoint_batch_zz.transpose(1, 2)
+#     keypoint_batch_trans = keypoint_batch_zz.transpose(1, 2)
 
-    # norm height [-1,1]
-    norm_kp = (keypoint_batch_trans/(height+epsilon))*2
-    norm_kp[:, 0, :] = norm_kp[:, 0, :] - width/(height+epsilon)
-    norm_kp[:, 1, :] = norm_kp[:, 1, :] - 1
+#     # norm height [-1,1]
+#     norm_kp = (keypoint_batch_trans/(height+epsilon))*2
+#     norm_kp[:, 0, :] = norm_kp[:, 0, :] - width/(height+epsilon)
+#     norm_kp[:, 1, :] = norm_kp[:, 1, :] - 1
 
-    return norm_kp.permute(2, 0, 1)
+#     return norm_kp.permute(2, 0, 1)
 
 ################
 

@@ -10,6 +10,7 @@ from pyquaternion import Quaternion
 from kalman_filter import NonlinearKinematicBicycle
 import pdb
 from nuscenes.map_expansion import arcline_path_utils
+import cv2 as cv
 
 
 nu_path = "./devkit/python-sdk/"
@@ -24,6 +25,10 @@ from environment import Environment, Scene, Node, GeometricMap, derivative_of
 # Multiprocessing
 from functools import partial
 from pathos.multiprocessing import ProcessPool as Pool
+
+# Imports for poses
+from nuscenes.utils.geometry_utils import view_points, BoxVisibility
+from nuscenes.utils.data_classes import LidarPointCloud
 
 FREQUENCY = 2
 dt = 1 / FREQUENCY
@@ -255,7 +260,50 @@ def aggregate_samples(nusc, all_sample_tokens, start, data_class):
     return samples
 
 
-def process_scene(token_samples, env, data_path, data_class):
+# Added functionality to include images
+def get_bbox_coordinates(instance_token, nusc):
+    """
+    Find the corresponding annotation tokens for the given instance in the current scene. If one of the annotation tokens has a fully visible bounding box, return it in normalized image coordinates together with its annotation token. Otherwise, return None. If multiple bounding boxes are fully visible, return the first one (for now).
+    """
+    return None
+
+
+def get_img_snippet(data_path, corners):
+    """
+    Use data_path and normalized image coordinates of the bbox corners to crop the corresponding image snippet and return it.
+    data_path: Path to the image
+    corners: [2,8] array of normalized image coordinates
+    """
+    # Load the image
+    original_img = cv.imread(data_path)
+    # Create a mask for the bounding box using the corners of the 3D bbox
+    # TODO: We might need to have a slight margin around the bbox?
+    min_xy = np.min(corners, axis=1)
+    max_xy = np.max(corners, axis=1)
+    return original_img[int(min_xy[1]):int(max_xy[1]), int(min_xy[0]):int(max_xy[0]), :]
+
+
+def get_pc_snippet(data_path, corners):
+    """
+    Use data_path and coordinates of the 3D bbox to get the corresponding point cloud snippet and return it.
+    data_path: Path to the point cloud
+    corners: [3,8] array of 3D coordinates
+    """
+    # Load complete point cloud
+    pc = LidarPointCloud.from_file(data_path) # points are accessible with pc.points (np.ndarray of shape (4, N))
+    # Create a mask for the bounding box using the corners of the 3D bbox
+    min_bound = np.min(corners, axis=1)
+    max_bound = np.max(corners, axis=1)
+    mask = np.logical_and(np.logical_and(pc.points[0, :] >= min_bound[0], pc.points[0, :] <= max_bound[0]), np.logical_and(pc.points[1, :] >= min_bound[1], pc.points[1, :] <= max_bound[1]), np.logical_and(pc.points[2, :] >= min_bound[2], pc.points[2, :] <= max_bound[2]))
+
+    return pc.points[:, mask]
+
+
+
+
+
+
+def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=None):
     sample_token, samples, map_name, ado_data, ego_data = token_samples
     data = pd.DataFrame(
         columns=[
@@ -302,21 +350,87 @@ def process_scene(token_samples, env, data_path, data_class):
 
             attribute_dict[annotation["instance_token"]].add(attribute)
 
-            data_point = pd.Series(
-                {
-                    "frame_id": frame_id,
-                    "type": our_category,
-                    "node_id": annotation["instance_token"],
-                    "robot": False,
-                    "x": annotation["translation"][0],
-                    "y": annotation["translation"][1],
-                    "z": annotation["translation"][2],
-                    "length": annotation["size"][0],
-                    "width": annotation["size"][1],
-                    "height": annotation["size"][2],
-                    "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
-                }
-            )
+            if mode == "base":
+                data_point = pd.Series(
+                    {
+                        "frame_id": frame_id,
+                        "type": our_category,
+                        "node_id": annotation["instance_token"],
+                        "robot": False,
+                        "x": annotation["translation"][0],
+                        "y": annotation["translation"][1],
+                        "z": annotation["translation"][2],
+                        "length": annotation["size"][0],
+                        "width": annotation["size"][1],
+                        "height": annotation["size"][2],
+                        "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
+                    }
+                )
+            elif mode == "pose-gt":
+                # Allowed cams: CAM_FRONT, CAM_FRONT_LEFT, CAM_FRONT_RIGHT
+                # Main cam: CAM_FRONT, only choose other cams if CAM_FRONT is not available
+                cams = ['CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT']
+                box_data_dict = dict()
+                for cam in cams:
+                    data_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data'][cam], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
+                    box_data_dict[cam] = {'data_path': data_path, 'boxes': boxes, 'camera_intrinsics': camera_intrinsics}
+                corners = None
+                for cam in cams:
+                    if len(box_data_dict[cam]['boxes']) > 0 and len(box_data_dict[cam]['boxes'] < 2):
+                        # Corners is a [2,8] array of normalized image coordinates
+                        corners = view_points(box_data_dict[cam]['boxes'][0].corners(), box_data_dict[cam]['camera_intrinsics'], normalize=True)[:2, :]
+                        break
+                if corners is None:
+                    # No fully visible bounding box found!
+                    img = None
+                else:
+                    # We have a bounding box, now crop the image snippet
+                    img = get_img_snippet(box_data_dict[cam]['data_path'], corners)
+                    # Additionally, if we have a fully visible bounding box with parsed corners, we also have to add the pc of the LiDAR data
+                    # Check if LIDAR_TOP is available
+                    if 'LIDAR_TOP' in sample['data'].keys():
+                        # Get the corresponding point cloud snippet
+                        data_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data']['LIDAR_TOP'], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
+                        if len(boxes) > 0 and len(boxes) < 2:
+                            corners = view_points(boxes[0].corners(), np.eye(4), normalize=False)[:3, :]
+                            pc = get_pc_snippet(data_path, corners)
+                        else:
+                            pc = None
+                    else:
+                        pc = None
+                data_point = pd.Series(
+                    {
+                        "frame_id": frame_id,
+                        "type": our_category,
+                        "node_id": annotation["instance_token"],
+                        "robot": False,
+                        "x": annotation["translation"][0],
+                        "y": annotation["translation"][1],
+                        "z": annotation["translation"][2],
+                        "length": annotation["size"][0],
+                        "width": annotation["size"][1],
+                        "height": annotation["size"][2],
+                        "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
+                        "img": img, # Numpy array of shape (H, W, 3)
+                        "pc": pc, # Numpy array of shape (3, N)
+                    }
+                )
+            elif mode == "pose-det":
+                data_point = pd.Series(
+                    {
+                        "frame_id": frame_id,
+                        "type": our_category,
+                        "node_id": annotation["instance_token"],
+                        "robot": False,
+                        "x": annotation["translation"][0],
+                        "y": annotation["translation"][1],
+                        "z": annotation["translation"][2],
+                        "length": annotation["size"][0],
+                        "width": annotation["size"][1],
+                        "height": annotation["size"][2],
+                        "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
+                    }
+                )
             data = data.append(data_point, ignore_index=True)
 
         # Ego Vehicle
@@ -627,7 +741,7 @@ def process_scene(token_samples, env, data_path, data_class):
     return scene
 
 
-def process_data(data_path, version, output_path, num_workers):
+def process_data(data_path, version, output_path, num_workers, mode="base"):
     nusc = NuScenes(version=version, dataroot=data_path, verbose=True)
     helper = PredictHelper(nusc)
     for data_class in ["train_val", "val", "train"]:
@@ -705,6 +819,8 @@ def process_data(data_path, version, output_path, num_workers):
                                 env=env,
                                 data_path=data_path,
                                 data_class=data_class,
+                                mode=mode,
+                                nusc=nusc,
                             ),
                             samples_list,
                         ),
@@ -718,7 +834,7 @@ def process_data(data_path, version, output_path, num_workers):
 
                 scenes.append(
                     process_scene(
-                        sample_set, env=env, data_path=data_path, data_class=data_class
+                        sample_set, env=env, data_path=data_path, data_class=data_class, mode=mode, nusc=nusc
                     )
                 )
 
@@ -751,5 +867,6 @@ if __name__ == "__main__":
     parser.add_argument("--version", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
     parser.add_argument("--num_workers", type=int, required=True)
+    parser.add_argument("--mode", type=str, default="base", required=False, help="Determine which preprocessing mode to use: base (base version of ScePT), poses-gt (ScePT with pose estimator using groundtruth detections), poses-det (ScePT with pose estimator and object detector)")
     args = parser.parse_args()
-    process_data(args.data, args.version, args.output_path, args.num_workers)
+    process_data(args.data, args.version, args.output_path, args.num_workers, mode=args.mode)
