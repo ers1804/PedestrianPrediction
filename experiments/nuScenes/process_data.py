@@ -49,6 +49,8 @@ data_columns_pedestrian = pd.MultiIndex.from_product(
     [["position", "velocity", "acceleration"], ["x", "y"]]
 )
 
+add_data_columns_pedestrian = pd.MultiIndex.from_tuples([('img',''), ('pc','')])
+
 curv_0_2 = 0
 curv_0_1 = 0
 total = 0
@@ -708,15 +710,39 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
             }
             node_data = pd.DataFrame(data_dict, columns=data_columns_vehicle)
         else:
-            data_dict = {
-                ("position", "x"): x,
-                ("position", "y"): y,
-                ("velocity", "x"): vx,
-                ("velocity", "y"): vy,
-                ("acceleration", "x"): ax,
-                ("acceleration", "y"): ay,
-            }
-            node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
+            if mode == "base":
+                data_dict = {
+                    ("position", "x"): x,
+                    ("position", "y"): y,
+                    ("velocity", "x"): vx,
+                    ("velocity", "y"): vy,
+                    ("acceleration", "x"): ax,
+                    ("acceleration", "y"): ay,
+                }
+                node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
+            elif mode == "pose-gt":
+                data_dict = {
+                    ("position", "x"): x,
+                    ("position", "y"): y,
+                    ("velocity", "x"): vx,
+                    ("velocity", "y"): vy,
+                    ("acceleration", "x"): ax,
+                    ("acceleration", "y"): ay,
+                    ("img", ""): node_df['img'].values,
+                    ("pc", ""): node_df['pc'].values,
+                }
+                pose_columns = data_columns_pedestrian.append(add_data_columns_pedestrian)
+                node_data = pd.DataFrame(data_dict, columns=pose_columns)
+            elif mode == "pose-det":
+                data_dict = {
+                    ("position", "x"): x,
+                    ("position", "y"): y,
+                    ("velocity", "x"): vx,
+                    ("velocity", "y"): vy,
+                    ("acceleration", "x"): ax,
+                    ("acceleration", "y"): ay,
+                }
+                node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
 
         node = Node(
             node_type=node_df.iloc[0]["type"],
