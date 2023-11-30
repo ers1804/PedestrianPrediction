@@ -129,7 +129,6 @@ class Trainer(ABC):
 
         self.device = 'cpu'
         self.generator.to(self.device)
-        self.alpha.to(self.device)
 
         logging.info(f'Testing data is stored in {self.run_paths["path_logs_eval"]}')
         load_dir = self.run_paths['path_ckpts_train'] + "/best_model"
@@ -219,6 +218,7 @@ class Trainer(ABC):
                     # Add groundtruth keypoints for samples without detection
                     for i in indices_wo_detection:
                         keypoints_2D[i] = data['keypoints_2D'][i]
+                    keypoints_2D = keypoints_2D.to(self.device)
                 else:
                     keypoints_2D = data['keypoints_2D'].to(self.device)
                 batch_dim = data['keypoints_2D'].shape[0]
