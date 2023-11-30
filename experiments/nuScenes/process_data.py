@@ -368,7 +368,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                         "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
                     }
                 )
-            elif mode == "pose-gt":
+            elif mode == "poses-gt":
                 # Allowed cams: CAM_FRONT, CAM_FRONT_LEFT, CAM_FRONT_RIGHT
                 # Main cam: CAM_FRONT, only choose other cams if CAM_FRONT is not available
                 cams = ['CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT']
@@ -417,7 +417,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                         "pc": pc, # Numpy array of shape (3, N)
                     }
                 )
-            elif mode == "pose-det":
+            elif mode == "poses-det":
                 data_point = pd.Series(
                     {
                         "frame_id": frame_id,
@@ -720,7 +720,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                     ("acceleration", "y"): ay,
                 }
                 node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
-            elif mode == "pose-gt":
+            elif mode == "poses-gt":
                 data_dict = {
                     ("position", "x"): x,
                     ("position", "y"): y,
@@ -733,7 +733,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                 }
                 pose_columns = data_columns_pedestrian.append(add_data_columns_pedestrian)
                 node_data = pd.DataFrame(data_dict, columns=pose_columns)
-            elif mode == "pose-det":
+            elif mode == "poses-det":
                 data_dict = {
                     ("position", "x"): x,
                     ("position", "y"): y,
@@ -867,7 +867,7 @@ def process_data(data_path, version, output_path, num_workers, mode="base"):
         print(f"Processed {len(scenes)} scenes")
 
         env.scenes = scenes
-
+        
         if len(scenes) > 0:
             data_dict_path = os.path.join(
                 output_path, "nuScenes_" + data_class + ".pkl"

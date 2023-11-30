@@ -49,5 +49,20 @@
             "justMyCode": false,
             "python": "/home/erik/scept_env/bin/python",
         },
+        {
+            "name": "process_data.py",
+            "type": "python",
+            "program": "/home/erik/ScePT/experiments/nuScenes/process_data.py",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "python": "/home/erik/scept_env/bin/python",
+            "args": ["--data", "/home/erik/NAS/publicdatasets/nuscenes",
+                    "--version", "v1.0-trainval",
+                    "--output_path", "/home/erik/ScePT/experiments/processed_pose_gt1",
+                    "--num_workers", "6",
+                    "--mode", "poses-gt",
+                    ],
+        }
     ]
 }
