@@ -374,28 +374,29 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                 cams = ['CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT']
                 box_data_dict = dict()
                 for cam in cams:
-                    data_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data'][cam], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
-                    box_data_dict[cam] = {'data_path': data_path, 'boxes': boxes, 'camera_intrinsics': camera_intrinsics}
+                    cam_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data'][cam], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
+                    box_data_dict[cam] = {'cam_path': cam_path, 'boxes': boxes, 'camera_intrinsics': camera_intrinsics}
                 corners = None
                 for cam in cams:
-                    if len(box_data_dict[cam]['boxes']) > 0 and len(box_data_dict[cam]['boxes'] < 2):
+                    if len(box_data_dict[cam]['boxes']) > 0 and len(box_data_dict[cam]['boxes']) < 2:
                         # Corners is a [2,8] array of normalized image coordinates
                         corners = view_points(box_data_dict[cam]['boxes'][0].corners(), box_data_dict[cam]['camera_intrinsics'], normalize=True)[:2, :]
                         break
                 if corners is None:
                     # No fully visible bounding box found!
                     img = None
+                    pc = None
                 else:
                     # We have a bounding box, now crop the image snippet
-                    img = get_img_snippet(box_data_dict[cam]['data_path'], corners)
+                    img = get_img_snippet(box_data_dict[cam]['cam_path'], corners)
                     # Additionally, if we have a fully visible bounding box with parsed corners, we also have to add the pc of the LiDAR data
                     # Check if LIDAR_TOP is available
                     if 'LIDAR_TOP' in sample['data'].keys():
                         # Get the corresponding point cloud snippet
-                        data_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data']['LIDAR_TOP'], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
+                        lidar_path, boxes, camera_intrinsics = nusc.get_sample_data(sample['data']['LIDAR_TOP'], box_vis_level=BoxVisibility.ALL, selected_anntokens=[annotation_token])
                         if len(boxes) > 0 and len(boxes) < 2:
                             corners = view_points(boxes[0].corners(), np.eye(4), normalize=False)[:3, :]
-                            pc = get_pc_snippet(data_path, corners)
+                            pc = get_pc_snippet(lidar_path, corners)
                         else:
                             pc = None
                     else:
