@@ -151,3 +151,4 @@ experiments/processed/zara2_val.pkl
 # Add the folder experiments/nuscenes/models to gitignore
 experiments/nuScenes/models/
 ScePT/poses/runs/
+experiments/processed_pose_gt1/
