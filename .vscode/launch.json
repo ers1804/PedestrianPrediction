@@ -60,7 +60,7 @@
             "args": ["--data", "/home/erik/NAS/publicdatasets/nuscenes",
                     "--version", "v1.0-trainval",
                     "--output_path", "/home/erik/ScePT/experiments/processed_pose_gt1",
-                    "--num_workers", "6",
+                    "--num_workers", "12",
                     "--mode", "poses-gt",
                     ],
         }

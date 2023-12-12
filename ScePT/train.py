@@ -225,6 +225,7 @@ def train(rank, args):
                                 con=default_con,
                                 max_clique_size=hyperparams["max_clique_size"],
                                 nusc_path=nusc_path,
+                                mode=args.mode,
                             ),
                             eval_env.scenes,
                         ),

@@ -418,6 +418,7 @@ def obtain_clique_from_scene(
     time_series=False,
     center_node=None,
     nusc_path=None,
+    mode="base",
 ):
     num_nodes = len(scene.nodes)
     T = scene.timesteps

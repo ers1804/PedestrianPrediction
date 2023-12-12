@@ -221,4 +221,9 @@ parser.add_argument("--use_processed_data",
 parser.add_argument("--eval_task",
                     help="what evaluate task to run",
                     default="eval_statistics")
+# Pose mode parameters
+parser.add_argument("--mode",
+                    type=str,
+                    default="base",
+                    help="Include pose estimation with GT detections (poses-gt), or with object detector (poses-det)")
 args = parser.parse_args()

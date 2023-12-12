@@ -94,7 +94,7 @@ standardization = {
 }
 
 
-def augment_scene(scene, angle):
+def augment_scene(scene, angle, mode='base'):
     def rotate_pc(pc, alpha):
         M = np.array([[np.cos(alpha), -np.sin(alpha)], [np.sin(alpha), np.cos(alpha)]])
         return M @ pc
@@ -112,6 +112,8 @@ def augment_scene(scene, angle):
     data_columns_pedestrian = pd.MultiIndex.from_product(
         [["position", "velocity", "acceleration"], ["x", "y"]]
     )
+
+    pose_columns = data_columns_pedestrian.append(add_data_columns_pedestrian)
 
     scene_aug = Scene(
         timesteps=scene.timesteps, dt=scene.dt, name=scene.name, non_aug_scene=scene
@@ -140,7 +142,12 @@ def augment_scene(scene, angle):
                 ("acceleration", "y"): ay,
             }
 
-            node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
+            if mode == 'base':
+                node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
+            elif mode == 'poses-gt':
+                node_data = pd.DataFrame(data_dict, columns=pose_columns)
+            elif mode == 'poses-det':
+                node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
 
             node = Node(
                 node_type=node.type,
@@ -373,8 +380,8 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                 # Main cam: CAM_FRONT, only choose other cams if CAM_FRONT is not available
                 # We only extract the additional data if the agent is a pedestrian
                 if our_category == env.NodeType.VEHICLE:
-                    pc = None
-                    img = None
+                    pc_path = None
+                    img_path = None
                 else:
                     cams = ['CAM_FRONT', 'CAM_FRONT_LEFT', 'CAM_FRONT_RIGHT']
                     box_data_dict = dict()
@@ -389,11 +396,14 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                             break
                     if corners is None:
                         # No fully visible bounding box found!
-                        img = None
-                        pc = None
+                        img_path = None
+                        pc_path = None
                     else:
                         # We have a bounding box, now crop the image snippet
                         img = get_img_snippet(box_data_dict[cam]['cam_path'], corners)
+                        # Save the image
+                        img_path = '/home/erik/ssd2/datasets/nuscenes_pose/' + str(frame_id) + "_" + str(annotation_token) + 'img.npy'
+                        np.save(img_path, img)
                         # Additionally, if we have a fully visible bounding box with parsed corners, we also have to add the pc of the LiDAR data
                         # Check if LIDAR_TOP is available
                         if 'LIDAR_TOP' in sample['data'].keys():
@@ -402,10 +412,12 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                             if len(boxes) > 0 and len(boxes) < 2:
                                 corners = view_points(boxes[0].corners(), np.eye(4), normalize=False)[:3, :]
                                 pc = get_pc_snippet(lidar_path, corners)
+                                pc_path = '/home/erik/ssd2/datasets/nuscenes_pose/' + str(frame_id) + "_" + str(annotation_token) + 'pc.npy'
+                                np.save(pc_path, pc)
                             else:
-                                pc = None
+                                pc_path = None
                         else:
-                            pc = None
+                            pc_path = None
                 data_point = pd.Series(
                     {
                         "frame_id": frame_id,
@@ -419,8 +431,8 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                         "width": annotation["size"][1],
                         "height": annotation["size"][2],
                         "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
-                        "img": img, # Numpy array of shape (H, W, 3) or None
-                        "pc": pc, # Numpy array of shape (3, N) or None
+                        "img": img_path, # Numpy array of shape (H, W, 3) or None
+                        "pc": pc_path, # Numpy array of shape (3, N) or None
                     }
                 )
             elif mode == "poses-det":
@@ -764,19 +776,20 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
             scene.robot = node
 
         scene.nodes.append(node)
-
-        if data_class == "train":
-            scene.augmented = list()
-            angles = np.arange(0, 360, 15)
-            for angle in angles:
-                scene.augmented.append(augment_scene(scene, angle))
+        # Turned this off as it was causing problems with the data
+        # Since the is returned as strange dtype=object arrays
+        # if data_class == "train":
+        #     scene.augmented = list()
+        #     angles = np.arange(0, 360, 15)
+        #     for angle in angles:
+        #         scene.augmented.append(augment_scene(scene, angle))
     return scene
 
 
 def process_data(data_path, version, output_path, num_workers, mode="base"):
     nusc = NuScenes(version=version, dataroot=data_path, verbose=True)
     helper = PredictHelper(nusc)
-    for data_class in ["train_val", "val", "train"]:
+    for data_class in ["train"]: # was: ["train_val", "val", "train"]
         # for data_class in ['mini_train', 'mini_val']: # ['mini_train', 'mini_val']:
         env = Environment(
             node_type_list=["VEHICLE", "PEDESTRIAN"],
