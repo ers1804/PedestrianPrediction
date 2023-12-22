@@ -168,22 +168,40 @@ class NodeTypeDataset(data.Dataset):
         return self.data[self.index[i]]
 
 class clique_dataset(data.Dataset):
-    def __init__(self, clique_data):
+    def __init__(self, clique_data, mode="base"):
 
+        self.mode = mode
         self.clique_data = clique_data
-        clique_type,clique_state_history,clique_first_timestep,clique_last_timestep,clique_edges,clique_future_state,clique_map,clique_node_size,clique_is_robot,clique_lane,clique_lane_dev,clique_fut_lane_dev = zip(*clique_data)
-        self.clique_type = clique_type
-        self.clique_state_history = clique_state_history
-        self.clique_first_timestep = clique_first_timestep
-        self.clique_last_timestep = clique_last_timestep
-        self.clique_edges = clique_edges
-        self.clique_future_state = clique_future_state
-        self.clique_map = clique_map
-        self.clique_node_size = clique_node_size
-        self.clique_is_robot = clique_is_robot
-        self.clique_lane = clique_lane
-        self.clique_lane_dev = clique_lane_dev 
-        self.clique_fut_lane_dev = clique_fut_lane_dev
+        if mode == "base":
+            clique_type,clique_state_history,clique_first_timestep,clique_last_timestep,clique_edges,clique_future_state,clique_map,clique_node_size,clique_is_robot,clique_lane,clique_lane_dev,clique_fut_lane_dev = zip(*clique_data)
+            self.clique_type = clique_type
+            self.clique_state_history = clique_state_history
+            self.clique_first_timestep = clique_first_timestep
+            self.clique_last_timestep = clique_last_timestep
+            self.clique_edges = clique_edges
+            self.clique_future_state = clique_future_state
+            self.clique_map = clique_map
+            self.clique_node_size = clique_node_size
+            self.clique_is_robot = clique_is_robot
+            self.clique_lane = clique_lane
+            self.clique_lane_dev = clique_lane_dev 
+            self.clique_fut_lane_dev = clique_fut_lane_dev
+        elif mode == "poses-gt":
+            clique_type,clique_state_history,clique_first_timestep,clique_last_timestep,clique_edges,clique_future_state,clique_map,clique_node_size,clique_is_robot,clique_lane,clique_lane_dev,clique_fut_lane_dev, clique_pose_history, clique_pose_future_state = zip(*clique_data)
+            self.clique_type = clique_type
+            self.clique_state_history = clique_state_history
+            self.clique_first_timestep = clique_first_timestep
+            self.clique_last_timestep = clique_last_timestep
+            self.clique_edges = clique_edges
+            self.clique_future_state = clique_future_state
+            self.clique_map = clique_map
+            self.clique_node_size = clique_node_size
+            self.clique_is_robot = clique_is_robot
+            self.clique_lane = clique_lane
+            self.clique_lane_dev = clique_lane_dev 
+            self.clique_fut_lane_dev = clique_fut_lane_dev
+            self.clique_pose_history = clique_pose_history
+            self.clique_pose_future_state = clique_pose_future_state
 
 
     def __len__(self):
@@ -203,11 +221,20 @@ class clique_dataset(data.Dataset):
         self.clique_lane_dev = self.clique_lane_dev.pin_memory()
         self.clique_fut_lane_dev = self.clique_fut_lane_dev.pin_memory()
 
+        if self.mode == "poses-gt":
+            self.clique_pose_history = self.clique_pose_history.pin_memory()
+            self.clique_pose_future_state = self.clique_pose_future_state.pin_memory()
+
 
     def __getitem__(self, idx):
-        return self.clique_type[idx],self.clique_state_history[idx],self.clique_first_timestep[idx],self.clique_last_timestep[idx],\
-               self.clique_edges[idx],self.clique_future_state[idx],self.clique_map[idx],self.clique_node_size[idx],self.clique_is_robot[idx],\
-               self.clique_lane[idx],self.clique_lane_dev[idx],self.clique_fut_lane_dev[idx]
+        if self.mode == "base":
+            return self.clique_type[idx],self.clique_state_history[idx],self.clique_first_timestep[idx],self.clique_last_timestep[idx],\
+                self.clique_edges[idx],self.clique_future_state[idx],self.clique_map[idx],self.clique_node_size[idx],self.clique_is_robot[idx],\
+                self.clique_lane[idx],self.clique_lane_dev[idx],self.clique_fut_lane_dev[idx]
+        elif self.mode == "poses-gt":
+            return self.clique_type[idx],self.clique_state_history[idx],self.clique_first_timestep[idx],self.clique_last_timestep[idx],\
+                self.clique_edges[idx],self.clique_future_state[idx],self.clique_map[idx],self.clique_node_size[idx],self.clique_is_robot[idx],\
+                self.clique_lane[idx],self.clique_lane_dev[idx],self.clique_fut_lane_dev[idx],self.clique_pose_history[idx],self.clique_pose_future_state[idx]
 
 class IRL_dataset(data.Dataset):
     def __init__(self, data):

@@ -424,6 +424,7 @@ def obtain_clique_from_scene(
     T = scene.timesteps
     presence_table = np.zeros([num_nodes, T], dtype=np.bool)
     state = hyperparams["state"]
+    pose_state = hyperparams["poses"]
     if dynamics is not None and con is not None:
         use_deflt_traj = True
         safety_horizon = hyperparams["safety_horizon"]
@@ -459,6 +460,11 @@ def obtain_clique_from_scene(
             result[time_steps.index(t)] = list()
         active_nodes = np.where(presence_table[:, t] == True)[0]
         active_nodes_state_history = list()
+
+        # Lists to collect pose information
+        active_nodes_pose_history = list()
+        active_nodes_pose_future_state = list()
+
         active_nodes_future_state = list()
         active_nodes_lane_dev = list()
         active_nodes_fut_lane_dev = list()
@@ -480,6 +486,23 @@ def obtain_clique_from_scene(
                     padding=0.0,
                 )
             )
+
+            # Create list of pose information arrays and append None if node is not a pedestrian to keep same length
+            if mode == "poses-gt":
+                if scene.nodes[active_nodes[i]].type == "PEDESTRIAN":
+                    active_nodes_pose_history.append(
+                        scene.nodes[active_nodes[i]].get_pose_info(
+                        np.array([t - ht, t]),
+                        pose_state[scene.nodes[active_nodes[i]].type],
+                        padding=None,
+                        )
+                    )
+                else:
+                    length = np.array([t - ht, t])[1] - np.array([t - ht, t])[0] + 1
+                    padded_data_array = np.full((length, 2), fill_value=None)
+                    active_nodes_pose_history.append(padded_data_array)
+
+                
             if lane_info is not None and scene.nodes[active_nodes[i]].type in lane_info:
                 active_nodes_lane_dev.append(
                     scene.nodes[active_nodes[i]].get(
@@ -505,6 +528,20 @@ def obtain_clique_from_scene(
                     padding=0.0,
                 )
             )
+            # Create list of pose information arrays and append None if node is not a pedestrian to keep same length
+            if mode == "poses-gt":
+                if scene.nodes[active_nodes[i]].type == "PEDESTRIAN":
+                    active_nodes_pose_future_state.append(
+                        scene.nodes[active_nodes[i]].get_pose_info(
+                        np.array([t + 1, t + ft]),
+                        pose_state[scene.nodes[active_nodes[i]].type],
+                        padding=None,
+                        )
+                    )
+                else:
+                    length = np.array([t + 1, t + ft])[1] - np.array([t + 1, t + ft])[0] + 1
+                    padded_data_array = np.full((length, 2), fill_value=None)
+                    active_nodes_pose_future_state.append(padded_data_array)
 
             # if torch.isnan(active_nodes_future_state[-1]).any():
             #     pdb.set_trace()
@@ -634,6 +671,19 @@ def obtain_clique_from_scene(
             clique_edges = [
                 (i, j) for (i, j) in edges if labels[i] == k and labels[j] == k
             ]
+
+            if mode == "poses-gt":
+                clique_pose_history = [
+                    active_nodes_pose_history[i]
+                    for i in range(0, labels.shape[0])
+                    if labels[i] == k
+                ]
+                clique_pose_future_state = [
+                    active_nodes_pose_future_state[i]
+                    for i in range(0, labels.shape[0])
+                    if labels[i] == k
+                ]
+
             clique_state_history = [
                 active_nodes_state_history[i]
                 for i in range(0, labels.shape[0])
@@ -847,75 +897,155 @@ def obtain_clique_from_scene(
             if time_series:
                 if return_nodes:
                     clique_nodes = [scene.nodes[i] for i in indices]
-                    result[time_steps.index(t)].append(
-                        (
-                            clique_nodes,
-                            clique_state_history,
-                            clique_first_timestep,
-                            clique_last_timestep,
-                            clique_edges,
-                            clique_future_state,
-                            clique_map,
-                            clique_node_size,
-                            clique_is_robot,
-                            clique_lane,
-                            clique_lane_dev,
-                            clique_fut_lane_dev,
+                    if mode == "base":
+                        result[time_steps.index(t)].append(
+                            (
+                                clique_nodes,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                            )
                         )
-                    )
+                    elif mode == "poses-gt":
+                        result[time_steps.index(t)].append(
+                            (
+                                clique_nodes,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                                clique_pose_history,
+                                clique_pose_future_state,
+                            )
+                        )
                 else:
-                    result[time_steps.index(t)].append(
-                        (
-                            clique_type,
-                            clique_state_history,
-                            clique_first_timestep,
-                            clique_last_timestep,
-                            clique_edges,
-                            clique_future_state,
-                            clique_map,
-                            clique_node_size,
-                            clique_is_robot,
-                            clique_lane,
-                            clique_lane_dev,
-                            clique_fut_lane_dev,
+                    if mode == "base":
+                        result[time_steps.index(t)].append(
+                            (
+                                clique_type,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                            )
                         )
-                    )
+                    elif mode == "poses-gt":
+                        result[time_steps.index(t)].append(
+                            (
+                                clique_type,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                                clique_pose_history,
+                                clique_pose_future_state,
+                            )
+                        )
             else:
                 if return_nodes:
                     clique_nodes = [scene.nodes[i] for i in indices]
-                    result.append(
-                        (
-                            clique_nodes,
-                            clique_state_history,
-                            clique_first_timestep,
-                            clique_last_timestep,
-                            clique_edges,
-                            clique_future_state,
-                            clique_map,
-                            clique_node_size,
-                            clique_is_robot,
-                            clique_lane,
-                            clique_lane_dev,
-                            clique_fut_lane_dev,
+                    if mode == "base":
+                        result.append(
+                            (
+                                clique_nodes,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                            )
                         )
-                    )
+                    elif mode == "poses-gt":
+                        result.append(
+                            (
+                                clique_nodes,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                                clique_pose_history,
+                                clique_pose_future_state,
+                            )
+                        )
                 else:
-                    result.append(
-                        (
-                            clique_type,
-                            clique_state_history,
-                            clique_first_timestep,
-                            clique_last_timestep,
-                            clique_edges,
-                            clique_future_state,
-                            clique_map,
-                            clique_node_size,
-                            clique_is_robot,
-                            clique_lane,
-                            clique_lane_dev,
-                            clique_fut_lane_dev,
+                    if mode == "base":
+                        result.append(
+                            (
+                                clique_type,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                            )
                         )
-                    )
+                    elif mode == "poses-gt":
+                        result.append(
+                            (
+                                clique_type,
+                                clique_state_history,
+                                clique_first_timestep,
+                                clique_last_timestep,
+                                clique_edges,
+                                clique_future_state,
+                                clique_map,
+                                clique_node_size,
+                                clique_is_robot,
+                                clique_lane,
+                                clique_lane_dev,
+                                clique_fut_lane_dev,
+                                clique_pose_history,
+                                clique_pose_future_state,
+                            )
+                        )
 
     if "nusc_map" in locals():
         del nusc_map
@@ -1301,6 +1431,74 @@ def get_IRL_data_from_scene(
         return result, time_steps
     else:
         return result
+
+
+def clique_collate_det(data):
+    pass
+
+
+def clique_collate_pose(data):
+    (
+        clique_type,
+        clique_state_history,
+        clique_first_timestep,
+        clique_last_timestep,
+        clique_edges,
+        clique_future_state,
+        clique_map,
+        clique_node_size,
+        clique_is_robot,
+        clique_lane,
+        clique_lane_dev,
+        clique_fut_lane_dev,
+        clique_pose_history,
+        clique_pose_future_state,
+    ) = zip(*data)
+    bs = len(clique_type)
+    scene_maps = list()
+    scene_pts = list()
+    heading = list()
+    idx = list()
+    patch_size = list()
+    processed_map = [None] * bs
+    for i in range(bs):
+        processed_map[i] = [None] * len(clique_map[i])
+        for j in range(len(clique_map[i])):
+            if clique_map[i][j] is not None:
+                scene_maps.append(clique_map[i][j][0])
+                scene_pts.append(clique_map[i][j][1])
+                heading.append(clique_map[i][j][2])
+                patch_size.append(clique_map[i][j][3])
+                idx.append((i, j))
+
+    if len(scene_maps) > 0:
+        maps = scene_maps[0].get_cropped_maps_from_scene_map_batch(
+            scene_maps,
+            # Change the way the tensor is created by turning it into a numpy array first: it was scene_pts=torch.Tensor(scene_pts),
+            scene_pts=torch.Tensor(np.array(scene_pts)),
+            patch_size=patch_size[0],
+            rotation=heading,
+        )
+
+        for n in range(len(idx)):
+            i, j = idx[n]
+            processed_map[i][j] = maps[n]
+    return (
+        clique_type,
+        clique_state_history,
+        clique_first_timestep,
+        clique_last_timestep,
+        clique_edges,
+        clique_future_state,
+        processed_map,
+        clique_node_size,
+        clique_is_robot,
+        clique_lane,
+        clique_lane_dev,
+        clique_fut_lane_dev,
+        clique_pose_history,
+        clique_pose_future_state,
+    )
 
 
 def clique_collate(data):

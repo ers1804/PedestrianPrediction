@@ -79,8 +79,15 @@ def train(rank, args):
     else:
         nusc_path = None
 
-    processed_train_file = "processed_" + args.train_data_dict
-    processed_eval_file = "processed_" + args.eval_data_dict
+    if args.mode == "poses-gt":
+        processed_train_file = "processed_poses_gt_" + args.train_data_dict
+        processed_eval_file = "processed_poses_gt_" + args.eval_data_dict
+    elif args.mode == "poses-pred":
+        processed_train_file = "processed_poses_det_" + args.train_data_dict
+        processed_eval_file = "processed_poses_det_" + args.eval_data_dict
+    else:
+        processed_train_file = "processed_" + args.train_data_dict
+        processed_eval_file = "processed_" + args.eval_data_dict
 
     if rank == 0:
         print("-----------------------")
@@ -167,6 +174,7 @@ def train(rank, args):
                             con=default_con,
                             max_clique_size=hyperparams["max_clique_size"],
                             nusc_path=nusc_path,
+                            mode=args.mode,
                         ),
                         train_env.scenes,
                     ),
@@ -182,12 +190,12 @@ def train(rank, args):
         with open(processed_train_file, "wb") as f:
             dill.dump(train_cliques, f)
         f.close()
-    train_data = clique_dataset(train_cliques)
+    train_data = clique_dataset(train_cliques, mode=args.mode)
     train_data_loader = DataLoader(
         train_data,
         pin_memory=True,
         persistent_workers=False,
-        collate_fn=clique_collate,
+        collate_fn=clique_collate if args.mode == "base" else (clique_collate_pose if args.mode == "poses-gt" else clique_collate_det),
         batch_size=hyperparams["batch_size"],
         shuffle=True,
         num_workers=args.num_workers,
@@ -253,7 +261,7 @@ def train(rank, args):
         eval_data,
         pin_memory=True,
         persistent_workers=False,
-        collate_fn=clique_collate,
+        collate_fn=clique_collate if args.mode == "base" else (clique_collate_pose if args.mode == "poses-gt" else clique_collate_det),
         batch_size=hyperparams["batch_size"],
         shuffle=True,
         num_workers=args.num_workers,

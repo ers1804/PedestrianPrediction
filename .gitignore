@@ -152,3 +152,5 @@ experiments/processed/zara2_val.pkl
 experiments/nuScenes/models/
 ScePT/poses/runs/
 experiments/processed_pose_gt1/
+processed_poses_gt_nuScenes_train.pkl
+processed_poses_gt_nuScenes_val.pkl

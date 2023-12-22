@@ -205,12 +205,6 @@
       "velocity": [
         "x",
         "y"
-      ],
-      "img": [
-        ""
-      ],
-      "pc": [
-        ""
       ]
     },
     "VEHICLE": {
@@ -225,6 +219,16 @@
         "°"
       ]
     }
+  },
+  "poses": {
+    "PEDESTRIAN": {
+      "img": [
+        ""
+      ],
+      "pc": [
+        ""
+      ]
+    } 
   },
   "lane_info": {
     "VEHICLE": {

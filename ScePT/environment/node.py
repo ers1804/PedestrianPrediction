@@ -103,8 +103,30 @@ class Node(object):
         length = tr_scene[1] - tr_scene[0] + 1  # tr is inclusive
         tr, paddingl, paddingu = self.scene_ts_to_node_ts(tr_scene)
         data_array = self.data[tr[0]:tr[1] + 1, state]
+        #print("Data content: ", data_array)
         padded_data_array = np.full((length, data_array.shape[1]), fill_value=padding)
         padded_data_array[paddingl:length - paddingu] = data_array
+        return padded_data_array
+    
+
+    def get_pose_info(self, tr_scene, state, padding=np.nan) -> np.ndarray:
+        """
+        Returns a time range of multiple properties of the node.
+
+        :param tr_scene: The timestep range (inklusive).
+        :param state: The state description for which the properties are returned.
+        :param padding: The value which should be used for padding if not enough information is available.
+        :return: Array of node property values.
+        """
+        if tr_scene.size == 1:
+            tr_scene = np.array([tr_scene[0], tr_scene[0]])
+        length = tr_scene[1] - tr_scene[0] + 1 # tr is inclusive
+        tr, paddingl, paddingu = self.scene_ts_to_node_ts(tr_scene)
+        data_array = self.data[tr[0]:tr[1] + 1, state]
+        #print("Data content: ", data_array)
+        padded_data_array = np.full((length, data_array.shape[1]), fill_value=padding)
+        padded_data_array[paddingl:length - paddingu] = data_array
+        #print(padded_data_array)
         return padded_data_array
 
     @property
