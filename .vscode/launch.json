@@ -43,7 +43,7 @@
         {
             "name": "main.py",
             "type": "python",
-            "program": "/home/erik/ScePT/ScePT/poses/3D_Pose_Estimation-main/main.py",
+            "program": "/home/erik/ScePT/ScePT/poses/Pose_Estimation_main/main.py",
             "request": "launch",
             "console": "integratedTerminal",
             "justMyCode": false,

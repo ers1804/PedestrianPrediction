@@ -221,9 +221,66 @@ parser.add_argument("--use_processed_data",
 parser.add_argument("--eval_task",
                     help="what evaluate task to run",
                     default="eval_statistics")
-# Pose mode parameters
+# Pose mode parameters and AlphaPose parameters
 parser.add_argument("--mode",
                     type=str,
                     default="base",
                     help="Include pose estimation with GT detections (poses-gt), or with object detector (poses-det)")
+parser.add_argument("--alpha_cfg",
+                    type=str,
+                    default="/home/erik/gitprojects/AlphaPose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml",
+                    help="Path to the AlphaPose config file")
+parser.add_argument("--alpha_checkpoint",
+                    type=str,
+                    default="/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth",
+                    help="Path to the AlphaPose checkpoint")
+parser.add_argument("--gpus",
+                    type=int,
+                    nargs='+',
+                    default=0,
+                    help="GPUs to use for AlphaPose")
+parser.add_argument("--alpha_detector",
+                    type=str,
+                    default="yolox-l",
+                    help="Detector to use for AlphaPose")
+parser.add_argument("--detbatch",
+                    type=int,
+                    default=1,
+                    help="Batch size for AlphaPose detector")
+parser.add_argument("--qsize",
+                    type=int,
+                    default=32,
+                    help="Batch size for AlphaPose pose estimator")
+parser.add_argument("--posebatch",
+                    type=int,
+                    default=32,
+                    help="Batch size for AlphaPose pose estimator")
+parser.add_argument("--sp",
+                    type=bool,
+                    default=True,
+                    help="Whether to use single-process mode for AlphaPose")
+parser.add_argument("--tracking",
+                    type=bool,
+                    default=False,
+                    help="Whether to use tracking for AlphaPose")
+parser.add_argument("--save_img",
+                    type=bool,
+                    default=False,
+                    help="Whether to save images for AlphaPose")
+parser.add_argument("--vis",
+                    type=bool,
+                    default=False,
+                    help="Whether to visualize images for AlphaPose")
+parser.add_argument("--pose_flow",
+                    type=bool,
+                    default=False,
+                    help="Whether to use pose flow for AlphaPose")
+parser.add_argument("--pose_track",
+                    type=bool,
+                    default=False,
+                    help="Whether to use pose tracking for AlphaPose")
+parser.add_argument("--min_box_area",
+                    type=float,
+                    default=0,
+                    help="Minimum box area for AlphaPose")
 args = parser.parse_args()
