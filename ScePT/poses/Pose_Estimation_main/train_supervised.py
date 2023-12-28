@@ -196,7 +196,6 @@ class SupervisedTrainer(Trainer):
                     keypoints_2D = data['keypoints_2D'].to(self.device)
                 keypoints_3D = data['keypoints_3D'].to(self.device)
                 pc = data['pc'].to(self.device).transpose(2, 1)
-
                 if pc.shape[0] != keypoints_2D.shape[0]:
                     print("Different batch sizes for pc and keypoints_2D.")
 

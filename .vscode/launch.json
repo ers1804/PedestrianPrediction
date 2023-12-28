@@ -41,7 +41,7 @@
                     "--use_processed_data"], // Only if data stays the same (e.g., ped only scenes)
         },
         {
-            "name": "main.py",
+            "name": "main.py pose estimator",
             "type": "python",
             "program": "/home/erik/ScePT/ScePT/poses/Pose_Estimation_main/main.py",
             "request": "launch",
