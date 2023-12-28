@@ -283,4 +283,8 @@ parser.add_argument("--min_box_area",
                     type=float,
                     default=0,
                     help="Minimum box area for AlphaPose")
+parser.add_argument("--model_id",
+                    type=str,
+                    required=True,
+                    help="Model ID for the pose estimator")
 args = parser.parse_args()

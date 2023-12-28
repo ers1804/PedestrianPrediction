@@ -10,9 +10,12 @@ from model.dataset import (
 )
 import time
 
+# Pose Estimation
+from poses import PoseEstimator
+
 
 class ScePT(nn.Module):
-    def __init__(self, model_registrar, hyperparams, log_writer, device):
+    def __init__(self, model_registrar, hyperparams, log_writer, device, args=None, use_poses=False):
         super(ScePT, self).__init__()
         self.hyperparams = hyperparams
         self.log_writer = log_writer
@@ -40,6 +43,12 @@ class ScePT(nn.Module):
                 )
             )
         self.pred_state = self.hyperparams["pred_state"]
+
+        # Load pose estimator if required
+        self.use_poses = use_poses
+        if self.use_poses:
+            self.pose_estimator = PoseEstimator(args.pose_model_id, args)
+
 
     def set_environment(self, env):
         self.env = env
