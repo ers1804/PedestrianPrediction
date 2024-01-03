@@ -28,8 +28,18 @@ from collections import defaultdict
 matplotlib.use("Agg")
 from functools import partial
 from pathos.multiprocessing import ProcessPool as Pool
+# from torch.multiprocessing import Pool, set_start_method, Queue
+# try:
+#     set_start_method('spawn')
+# except RuntimeError:
+#     pass
 from torch.cuda.amp import autocast, GradScaler
 import model.dynamics as dynamic_module
+
+sys.path.append('/home/erik/ScePT/ScePT/poses/Pose_Estimation_main')
+from poses.Pose_Estimation_main.models.supervised.fusion.lidar_2dkeypoint import Lidar2dKeypointFusionmodel
+import gin
+from poses.Pose_Estimation_main.utils.utils_params import gen_run_folder
 
 thismodule = sys.modules[__name__]
 
@@ -160,29 +170,46 @@ def train(rank, args):
         #                                     con=default_con,
         #                                     max_clique_size=hyperparams['max_clique_size'],
         #                                     nusc_path=nusc_path)
-        with Pool(num_workers) as pool:
-            scene_cliques = list(
-                tqdm(
-                    pool.imap(
-                        partial(
-                            obtain_clique_from_scene,
-                            adj_radius=hyperparams["adj_radius"],
-                            ht=hyperparams["maximum_history_length"],
-                            ft=hyperparams["prediction_horizon"],
-                            hyperparams=hyperparams,
-                            dynamics=dynamics,
-                            con=default_con,
-                            max_clique_size=hyperparams["max_clique_size"],
-                            nusc_path=nusc_path,
-                            mode=args.mode,
+        if args.mode == "base":
+            with Pool(num_workers) as pool:
+                scene_cliques = list(
+                    tqdm(
+                        pool.imap(
+                            partial(
+                                obtain_clique_from_scene,
+                                adj_radius=hyperparams["adj_radius"],
+                                ht=hyperparams["maximum_history_length"],
+                                ft=hyperparams["prediction_horizon"],
+                                hyperparams=hyperparams,
+                                dynamics=dynamics,
+                                con=default_con,
+                                max_clique_size=hyperparams["max_clique_size"],
+                                nusc_path=nusc_path,
+                                mode=args.mode,
+                                args=args,
+                            ),
+                            train_env.scenes,
                         ),
-                        train_env.scenes,
-                    ),
-                    desc=f"Processing Scenes ({num_workers} CPUs)",
-                    total=len(train_env.scenes),
-                    disable=(rank > 0),
-                )
-            )
+                        desc=f"Processing Scenes ({num_workers} CPUs)",
+                        total=len(train_env.scenes),
+                        disable=(rank > 0),
+                    )
+                    )
+        else:
+            scene_cliques = list()
+            for scene in tqdm(train_env.scenes):
+                reworked_scene = obtain_clique_from_scene(scene,
+                                         adj_radius=hyperparams["adj_radius"],
+                                         ht=hyperparams["maximum_history_length"],
+                                         ft=hyperparams["prediction_horizon"],
+                                         hyperparams=hyperparams,
+                                         dynamics=dynamics,
+                                         con=default_con,
+                                         max_clique_size=hyperparams["max_clique_size"],
+                                         nusc_path=nusc_path,
+                                         mode=args.mode,
+                                         args=args)
+                scene_cliques.append(reworked_scene)
         train_cliques = scene_cliques[0]
         for i in range(1, len(scene_cliques)):
             train_cliques = train_cliques + scene_cliques[i]
@@ -219,29 +246,46 @@ def train(rank, args):
                 eval_cliques = dill.load(f)
         else:
             # eval_scenes_sample_probs = eval_env.scenes_freq_mult_prop if args.scene_freq_mult_eval else None
-            with Pool(num_workers) as pool:
-                scene_cliques = list(
-                    tqdm(
-                        pool.imap(
-                            partial(
-                                obtain_clique_from_scene,
-                                adj_radius=hyperparams["adj_radius"],
-                                ht=hyperparams["maximum_history_length"],
-                                ft=hyperparams["prediction_horizon"],
-                                hyperparams=hyperparams,
-                                dynamics=dynamics,
-                                con=default_con,
-                                max_clique_size=hyperparams["max_clique_size"],
-                                nusc_path=nusc_path,
-                                mode=args.mode,
+            if args.mode == "base":
+                with Pool(num_workers) as pool:
+                    scene_cliques = list(
+                        tqdm(
+                            pool.imap(
+                                partial(
+                                    obtain_clique_from_scene,
+                                    adj_radius=hyperparams["adj_radius"],
+                                    ht=hyperparams["maximum_history_length"],
+                                    ft=hyperparams["prediction_horizon"],
+                                    hyperparams=hyperparams,
+                                    dynamics=dynamics,
+                                    con=default_con,
+                                    max_clique_size=hyperparams["max_clique_size"],
+                                    nusc_path=nusc_path,
+                                    mode=args.mode,
+                                    args=args,
+                                ),
+                                eval_env.scenes,
                             ),
-                            eval_env.scenes,
-                        ),
-                        desc=f"Processing Scenes ({num_workers} CPUs)",
-                        total=len(eval_env.scenes),
-                        disable=(rank > 0),
-                    )
-                )
+                            desc=f"Processing Scenes ({num_workers} CPUs)",
+                            total=len(eval_env.scenes),
+                            disable=(rank > 0),
+                        )
+                        )
+            else:
+                scene_cliques = list()
+                for scene in tqdm(eval_env.scenes):
+                    reworked_scene = obtain_clique_from_scene(scene,
+                                             adj_radius=hyperparams["adj_radius"],
+                                             ht=hyperparams["maximum_history_length"],
+                                             ft=hyperparams["prediction_horizon"],
+                                             hyperparams=hyperparams,
+                                             dynamics=dynamics,
+                                             con=default_con,
+                                             max_clique_size=hyperparams["max_clique_size"],
+                                             nusc_path=nusc_path,
+                                             mode=args.mode,
+                                             args=args)
+                    scene_cliques.append(reworked_scene)
             eval_cliques = scene_cliques[0]
             for i in range(1, len(scene_cliques)):
                 eval_cliques = eval_cliques + scene_cliques[i]
@@ -580,6 +624,9 @@ def train(rank, args):
 
 
 def spmd_main(local_rank):
+    # Parse Gin config for pose estimation
+    gin.parse_config_file('/home/erik/ScePT/ScePT/poses/runs/' + args.model_id + '/config_operative.gin')
+
     if torch.cuda.is_available():
         backend = "nccl"
         torch.backends.cudnn.benchmark = True

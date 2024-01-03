@@ -237,9 +237,9 @@ parser.add_argument("--alpha_checkpoint",
 parser.add_argument("--gpus",
                     type=int,
                     nargs='+',
-                    default=0,
+                    default=[0],
                     help="GPUs to use for AlphaPose")
-parser.add_argument("--alpha_detector",
+parser.add_argument("--detector",
                     type=str,
                     default="yolox-l",
                     help="Detector to use for AlphaPose")
@@ -249,11 +249,11 @@ parser.add_argument("--detbatch",
                     help="Batch size for AlphaPose detector")
 parser.add_argument("--qsize",
                     type=int,
-                    default=32,
+                    default=1,
                     help="Batch size for AlphaPose pose estimator")
 parser.add_argument("--posebatch",
                     type=int,
-                    default=32,
+                    default=1,
                     help="Batch size for AlphaPose pose estimator")
 parser.add_argument("--sp",
                     type=bool,
@@ -287,4 +287,12 @@ parser.add_argument("--model_id",
                     type=str,
                     required=True,
                     help="Model ID for the pose estimator")
+parser.add_argument("--sample_to",
+                    type=int,
+                    default=512,
+                    help="Number of points per point cloud")
+parser.add_argument("--alpha_path",
+                    type=str,
+                    default="/home/erik/gitprojects/AlphaPose",
+                    help="Path to AlphaPose")
 args = parser.parse_args()

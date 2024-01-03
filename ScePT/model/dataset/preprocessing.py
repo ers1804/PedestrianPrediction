@@ -17,7 +17,12 @@ from model.dynamics import *
 from model.model_utils import *
 from functools import partial
 
+from model.poses import PoseEstimator
+import random
+import cv2 as cv
+
 container_abcs = collections.abc
+
 
 
 def smooth_angle_kinks(theta0):
@@ -419,7 +424,9 @@ def obtain_clique_from_scene(
     center_node=None,
     nusc_path=None,
     mode="base",
+    args=None,
 ):
+    pose_estimator = PoseEstimator(args.model_id, args)
     num_nodes = len(scene.nodes)
     T = scene.timesteps
     presence_table = np.zeros([num_nodes, T], dtype=np.bool)
@@ -915,6 +922,57 @@ def obtain_clique_from_scene(
                             )
                         )
                     elif mode == "poses-gt":
+                        with torch.no_grad():
+                            # Turn pose lists of img and pc paths into actual poses
+                            new_clique_pose_history = []
+                            for node in clique_pose_history:
+                                num_steps = node.shape[0]
+                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                for i in range(num_steps):
+                                    if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                                        img = [np.load(node[i, 0])]
+                                        pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                                        if pc.shape[2] == 0:
+                                            continue
+                                        if pc.shape[2] > args.sample_to:
+                                            indices = random.sample(range(pc.shape[2]), args.sample_to)
+                                            pc = pc[:, :, indices]
+                                        elif pc.shape[2] < args.sample_to:
+                                            diff = args.sample_to - pc.shape[2]
+                                            if len(range(pc.shape[2])) < diff:
+                                                diff = len(range(pc.shape[2]))
+                                            indices = random.choices(range(pc.shape[2]), k=diff)
+                                            double_points = pc[:, :, indices]
+                                            pc = np.concatenate((pc, double_points), axis=2)
+                                        keypoints = pose_estimator.estimate_poses(img, pc)
+                                        poses[i] = keypoints[0].cpu().numpy()
+                                new_clique_pose_history.append(poses)
+                            clique_pose_history = new_clique_pose_history
+
+                            # new_clique_pose_future = []
+                            # for node in clique_pose_future_state:
+                            #     num_steps = node.shape[0]
+                            #     poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                            #     for i in range(num_steps):
+                            #         if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                            #             img = [np.load(node[i, 0])]
+                            #             pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                            #             if pc.shape[2] == 0:
+                            #                 continue
+                            #             if pc.shape[2] > args.sample_to:
+                            #                 indices = random.sample(range(pc.shape[2]), args.sample_to)
+                            #                 pc = pc[:, :, indices]
+                            #             elif pc.shape[2] < args.sample_to:
+                            #                 diff = args.sample_to - pc.shape[2]
+                            #                 if len(range(pc.shape[2])) < diff:
+                            #                     diff = len(range(pc.shape[2]))
+                            #                 indices = random.choices(range(pc.shape[2]), k=diff)
+                            #                 double_points = pc[:, :, indices]
+                            #                 pc = np.concatenate((pc, double_points), axis=2)
+                            #             keypoints = pose_estimator.estimate_poses(img, pc)
+                            #             poses[i] = keypoints[0].cpu().numpy()
+                            #     new_clique_pose_future.append(poses)
+                            # clique_pose_future_state = new_clique_pose_future
                         result[time_steps.index(t)].append(
                             (
                                 clique_nodes,
@@ -952,6 +1010,57 @@ def obtain_clique_from_scene(
                             )
                         )
                     elif mode == "poses-gt":
+                        with torch.no_grad():
+                            # Turn pose lists of img and pc paths into actual poses
+                            new_clique_pose_history = []
+                            for node in clique_pose_history:
+                                num_steps = node.shape[0]
+                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                for i in range(num_steps):
+                                    if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                                        img = [np.load(node[i, 0])]
+                                        pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                                        if pc.shape[2] == 0:
+                                            continue
+                                        if pc.shape[2] > args.sample_to:
+                                            indices = random.sample(range(pc.shape[2]), args.sample_to)
+                                            pc = pc[:, :, indices]
+                                        elif pc.shape[2] < args.sample_to:
+                                            diff = args.sample_to - pc.shape[2]
+                                            if len(range(pc.shape[2])) < diff:
+                                                diff = len(range(pc.shape[2]))
+                                            indices = random.choices(range(pc.shape[2]), k=diff)
+                                            double_points = pc[:, :, indices]
+                                            pc = np.concatenate((pc, double_points), axis=2)
+                                        keypoints = pose_estimator.estimate_poses(img, pc)
+                                        poses[i] = keypoints[0].cpu().numpy()
+                                new_clique_pose_history.append(poses)
+                            clique_pose_history = new_clique_pose_history
+
+                            # new_clique_pose_future = []
+                            # for node in clique_pose_future_state:
+                            #     num_steps = node.shape[0]
+                            #     poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                            #     for i in range(num_steps):
+                            #         if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                            #             img = [np.load(node[i, 0])]
+                            #             pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                            #             if pc.shape[2] == 0:
+                            #                 continue
+                            #             if pc.shape[2] > args.sample_to:
+                            #                 indices = random.sample(range(pc.shape[2]), args.sample_to)
+                            #                 pc = pc[:, :, indices]
+                            #             elif pc.shape[2] < args.sample_to:
+                            #                 diff = args.sample_to - pc.shape[2]
+                            #                 if len(range(pc.shape[2])) < diff:
+                            #                     diff = len(range(pc.shape[2]))
+                            #                 indices = random.choices(range(pc.shape[2]), k=diff)
+                            #                 double_points = pc[:, :, indices]
+                            #                 pc = np.concatenate((pc, double_points), axis=2)
+                            #             keypoints = pose_estimator.estimate_poses(img, pc)
+                            #             poses[i] = keypoints[0].cpu().numpy()
+                            #     new_clique_pose_future.append(poses)
+                            # clique_pose_future_state = new_clique_pose_future
                         result[time_steps.index(t)].append(
                             (
                                 clique_type,
@@ -991,6 +1100,57 @@ def obtain_clique_from_scene(
                             )
                         )
                     elif mode == "poses-gt":
+                        with torch.no_grad():
+                            # Turn pose lists of img and pc paths into actual poses
+                            new_clique_pose_history = []
+                            for node in clique_pose_history:
+                                num_steps = node.shape[0]
+                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                for i in range(num_steps):
+                                    if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                                        img = [np.load(node[i, 0])]
+                                        pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                                        if pc.shape[2] == 0:
+                                            continue
+                                        if pc.shape[2] > args.sample_to:
+                                            indices = random.sample(range(pc.shape[2]), args.sample_to)
+                                            pc = pc[:, :, indices]
+                                        elif pc.shape[2] < args.sample_to:
+                                            diff = args.sample_to - pc.shape[2]
+                                            if len(range(pc.shape[2])) < diff:
+                                                diff = len(range(pc.shape[2]))
+                                            indices = random.choices(range(pc.shape[2]), k=diff)
+                                            double_points = pc[:, :, indices]
+                                            pc = np.concatenate((pc, double_points), axis=2)
+                                        keypoints = pose_estimator.estimate_poses(img, pc)
+                                        poses[i] = keypoints[0].cpu().numpy()
+                                new_clique_pose_history.append(poses)
+                            clique_pose_history = new_clique_pose_history
+
+                            # new_clique_pose_future = []
+                            # for node in clique_pose_future_state:
+                            #     num_steps = node.shape[0]
+                            #     poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                            #     for i in range(num_steps):
+                            #         if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                            #             img = [np.load(node[i, 0])]
+                            #             pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                            #             if pc.shape[2] == 0:
+                            #                 continue
+                            #             if pc.shape[2] > args.sample_to:
+                            #                 indices = random.sample(range(pc.shape[2]), args.sample_to)
+                            #                 pc = pc[:, :, indices]
+                            #             elif pc.shape[2] < args.sample_to:
+                            #                 diff = args.sample_to - pc.shape[2]
+                            #                 if len(range(pc.shape[2])) < diff:
+                            #                     diff = len(range(pc.shape[2]))
+                            #                 indices = random.choices(range(pc.shape[2]), k=diff)
+                            #                 double_points = pc[:, :, indices]
+                            #                 pc = np.concatenate((pc, double_points), axis=2)
+                            #             keypoints = pose_estimator.estimate_poses(img, pc)
+                            #             poses[i] = keypoints[0].cpu().numpy()
+                            #     new_clique_pose_future.append(poses)
+                            # clique_pose_future_state = new_clique_pose_future
                         result.append(
                             (
                                 clique_nodes,
@@ -1028,6 +1188,75 @@ def obtain_clique_from_scene(
                             )
                         )
                     elif mode == "poses-gt":
+                        with torch.no_grad():
+                            # Turn pose lists of img and pc paths into actual poses
+                            new_clique_pose_history = []
+                            for node in clique_pose_history:
+                                num_steps = node.shape[0]
+                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                for i in range(num_steps):
+                                    if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                                        if type(node[i, 0]) is str:
+                                            img = [np.load(node[i, 0])]
+                                        else:
+                                            print("not a string")
+                                            continue
+                                        #cv.imshow("img", img[0])
+                                        #cv.waitKey(0)
+                                        if type(node[i, 1]) is str:
+                                            pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                                        else:
+                                            print("not a string")
+                                            continue
+                                        if pc.shape[2] == 0:
+                                            continue
+                                        if pc.shape[2] > args.sample_to:
+                                            indices = random.sample(range(pc.shape[2]), args.sample_to)
+                                            pc = pc[:, :, indices]
+                                        elif pc.shape[2] < args.sample_to:
+                                            diff = args.sample_to - pc.shape[2]
+                                            if len(range(pc.shape[2])) < diff:
+                                                diff = len(range(pc.shape[2]))
+                                            indices = random.choices(range(pc.shape[2]), k=diff)
+                                            double_points = pc[:, :, indices]
+                                            pc = np.concatenate((pc, double_points), axis=2)
+                                        keypoints = pose_estimator.estimate_poses(img, pc)
+                                        poses[i] = keypoints[0].cpu().numpy()
+                                new_clique_pose_history.append(poses)
+                            clique_pose_history = new_clique_pose_history
+
+                            # new_clique_pose_future = []
+                            # for node in clique_pose_future_state:
+                            #     num_steps = node.shape[0]
+                            #     poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                            #     for i in range(num_steps):
+                            #         if type(node[i, 0]) is str and type(node[i, 1]) is str:
+                            #             if type(node[i, 0]) is str:
+                            #                 img = [np.load(node[i, 0])]
+                            #             else:
+                            #                 print("not a string")
+                            #                 continue
+                            #             if type(node[i, 1]) is str:
+                            #                 pc = np.expand_dims(np.load(node[i, 1]), axis=0)[:, :3, :]
+                            #             else:
+                            #                 print("not a string")
+                            #                 continue
+                            #             if pc.shape[2] == 0:
+                            #                 continue
+                            #             if pc.shape[2] > args.sample_to:
+                            #                 indices = random.sample(range(pc.shape[2]), args.sample_to)
+                            #                 pc = pc[:, :, indices]
+                            #             elif pc.shape[2] < args.sample_to:
+                            #                 diff = args.sample_to - pc.shape[2]
+                            #                 if len(range(pc.shape[2])) < diff:
+                            #                     diff = len(range(pc.shape[2]))
+                            #                 indices = random.choices(range(pc.shape[2]), k=diff)
+                            #                 double_points = pc[:, :, indices]
+                            #                 pc = np.concatenate((pc, double_points), axis=2)
+                            #             keypoints = pose_estimator.estimate_poses(img, pc)
+                            #             poses[i] = keypoints[0].cpu().numpy()
+                            #     new_clique_pose_future.append(poses)
+                            # clique_pose_future_state = new_clique_pose_future
                         result.append(
                             (
                                 clique_type,

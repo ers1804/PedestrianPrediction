@@ -11,7 +11,7 @@ from model.dataset import (
 import time
 
 # Pose Estimation
-from poses import PoseEstimator
+from model.poses import PoseEstimator
 
 
 class ScePT(nn.Module):
@@ -46,8 +46,9 @@ class ScePT(nn.Module):
 
         # Load pose estimator if required
         self.use_poses = use_poses
-        if self.use_poses:
-            self.pose_estimator = PoseEstimator(args.pose_model_id, args)
+        # if self.use_poses:
+        #     self.pose_estimator = PoseEstimator(args.pose_model_id, args)
+        #     self.args = args
 
 
     def set_environment(self, env):
@@ -63,6 +64,8 @@ class ScePT(nn.Module):
             device=self.device,
             edge_types=edge_types,
             log_writer=self.log_writer,
+            use_poses=self.use_poses,
+            args=self.args,
         )
 
     def set_curr_iter(self, curr_iter):
@@ -77,24 +80,26 @@ class ScePT(nn.Module):
 
     def forward(self, batch):
         return self.train_loss(batch)
-
+    
     def train_loss(self, batch):
-        (
-            clique_type,
-            clique_state_history,
-            clique_first_timestep,
-            clique_last_timestep,
-            clique_edges,
-            clique_future_state,
-            clique_map,
-            clique_node_size,
-            clique_is_robot,
-            clique_lane,
-            clique_lane_dev,
-            clique_fut_lane_dev,
-        ) = batch
-
-        loss = self.model(
+        if self.use_poses:
+            (
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_future_state,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_fut_lane_dev,
+                clique_pose_history,
+                clique_pose_future_state
+            ) = batch
+            loss = self.model(
             clique_type=clique_type,
             clique_state_history=clique_state_history,
             clique_first_timestep=clique_first_timestep,
@@ -107,7 +112,39 @@ class ScePT(nn.Module):
             clique_lane=clique_lane,
             clique_lane_dev=clique_lane_dev,
             clique_fut_lane_dev=clique_fut_lane_dev,
-        )
+            clique_pose_history=clique_pose_history,
+            clique_pose_future_state=clique_pose_future_state
+            )
+        else:
+            (
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_future_state,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_fut_lane_dev,
+            ) = batch
+
+            loss = self.model(
+                clique_type=clique_type,
+                clique_state_history=clique_state_history,
+                clique_first_timestep=clique_first_timestep,
+                clique_last_timestep=clique_last_timestep,
+                clique_edges=clique_edges,
+                clique_future_state=clique_future_state,
+                clique_map=clique_map,
+                clique_node_size=clique_node_size,
+                clique_is_robot=clique_is_robot,
+                clique_lane=clique_lane,
+                clique_lane_dev=clique_lane_dev,
+                clique_fut_lane_dev=clique_fut_lane_dev,
+            )
 
         return loss
 

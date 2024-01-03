@@ -3,7 +3,7 @@ import torch.nn as nn
 import gin
 import torch.utils.data
 import torch.nn.functional as F
-from models.supervised.point_networks.pointnet_utils import PointNetEncoder
+from poses.Pose_Estimation_main.models.supervised.point_networks.pointnet_utils import PointNetEncoder
 
 
 @gin.configurable

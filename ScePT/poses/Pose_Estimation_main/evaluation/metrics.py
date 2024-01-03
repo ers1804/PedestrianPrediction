@@ -3,7 +3,7 @@ import torch.nn as nn
 import tensorflow as tf
 import numpy as np
 
-from configs.constants import JOINT_KEYS
+from poses.Pose_Estimation_main.configs.constants import JOINT_KEYS
 
 from waymo_open_dataset import label_pb2
 from waymo_open_dataset.protos import keypoint_pb2

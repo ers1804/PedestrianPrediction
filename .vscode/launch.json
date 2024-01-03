@@ -90,6 +90,9 @@
                     "--data_dir", "/home/erik/ScePT/experiments/processed_pose_gt1",
                     "--mode", "poses-gt",
                     "--log_tag", "poses-gt-trial",
+                    "--model_id", "run_2023-11-29T07-48-39-851756",
+                    "--sample_to=128",
+                    "--alpha_path", "/home/erik/gitprojects/AlphaPose"
                     ], // Only if data stays the same (e.g., ped only scenes)
         },
     ]

@@ -1,7 +1,7 @@
 
 import gin
 import torch.nn as nn
-from models.supervised.lifting_networks.model_utils import Encoder2D, Decoder3D
+from poses.Pose_Estimation_main.models.supervised.lifting_networks.model_utils import Encoder2D, Decoder3D
 
 
 @gin.configurable

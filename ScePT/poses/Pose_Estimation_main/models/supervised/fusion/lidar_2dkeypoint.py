@@ -2,9 +2,9 @@ import gin
 import torch
 import torch.nn as nn
 
-from evaluation.metrics import Metrics
-from models.supervised.point_networks.pointnet import PointNet
-from models.supervised.lifting_networks.simple_lifting_model import SimpleLiftingModel
+from poses.Pose_Estimation_main.evaluation.metrics import Metrics
+from poses.Pose_Estimation_main.models.supervised.point_networks.pointnet import PointNet
+from poses.Pose_Estimation_main.models.supervised.lifting_networks.simple_lifting_model import SimpleLiftingModel
 
 
 @gin.configurable
@@ -39,7 +39,7 @@ class Lidar2dKeypointFusionmodel(nn.Module):
             tuple: (predictions tensor, transformation features from PointNet (regularization), loss contributions of each net)
         """
         point_net_preds, trans_features = self.point_net(pc)
-        lifting_net_preds = self.lifting_net(keypoints_2D)
+        lifting_net_preds = self.lifting_net(keypoints_2D.repeat(2,1,1))[:1, :, :]
 
         if gt:
             keypoints_3D = gt[0]

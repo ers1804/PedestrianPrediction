@@ -6,10 +6,10 @@ import wandb
 import numpy as np
 
 from abc import ABC, abstractmethod
-from evaluation.metrics import Metrics
-import evaluation.metrics_waymo as metrics_waymo
+from poses.Pose_Estimation_main.evaluation.metrics import Metrics
+import poses.Pose_Estimation_main.evaluation.metrics_waymo as metrics_waymo
 
-from configs.constants import JOINT_NAMES
+from poses.Pose_Estimation_main.configs.constants import JOINT_NAMES
 
 # AlphaPose
 from alphapose.utils.config import update_config

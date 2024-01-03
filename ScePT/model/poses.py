@@ -4,7 +4,7 @@ import torch
 import logging
 
 # AlphaPose
-sys.path.append('/home/erik/gitproject/AlphaPose')
+#sys.path.append('/home/erik/gitproject/AlphaPose')
 from alphapose.utils.config import update_config
 from alphapose.models import builder
 from trackers.tracker_cfg import cfg as tcfg
@@ -23,8 +23,9 @@ class PoseEstimator:
     def __init__(self, model_id, args):
         self.args = args
 
+        sys.path.append(args.alpha_path)
         # Load Fusion Network
-        self.model = get_pose_model()
+        self.model = Lidar2dKeypointFusionmodel()
         logging.info(f"Loading model weights from {model_id}/ckpts/best_model")
         self.model.load_state_dict(torch.load("/home/erik/ScePT/ScePT/poses/runs/" + model_id + "/ckpts/best_model"))
         self.model.to(self.args.device)
@@ -59,14 +60,14 @@ class PoseEstimator:
         return keypoints_waymo
     
 
-    def forward(self, img, pc):
+    def estimate_poses(self, img, pc):
         """
         img: List of images (numpy)
         pc: Numpy array of point clouds as [batch_size, 3, point_num]
         returns
         predictions: Tensor of shape [batch_size, num_joints, 3]
         """
-        det_loader = DetectionLoader([numpy_array.numpy() for numpy_array in img],
+        det_loader = DetectionLoader(img,#[numpy_array.numpy() for numpy_array in img],
                                     get_detector(self.args),
                                     self.alpha_cfg,
                                     self.args,
@@ -88,7 +89,7 @@ class PoseEstimator:
                     # TODO: Decide, what to do in this case!
                     break
                 if boxes is None or boxes.nelement() == 0:
-                    print('No Human Detected')
+                    #print('No Human Detected')
                     # Save indices and add groundtruth keypoints later
                     indices_wo_detection.append(i)
                     continue
@@ -118,7 +119,7 @@ class PoseEstimator:
         # Output should be a tensor of shape [batch_size, num_joints, 2]
         # Batch the keypoints to tensor
         # TODO: Recheck if batch_size is correct here
-        parsed_keypoints = torch.zeros((self.args.batch_size, self.alpha_cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
+        parsed_keypoints = torch.zeros((self.args.detbatch, self.alpha_cfg.DATA_PRESET.NUM_JOINTS, 2), dtype=torch.float32)
         for i, sample in enumerate(results):
             index = indices_w_detection[i]
             if len(sample['result']) == 0:

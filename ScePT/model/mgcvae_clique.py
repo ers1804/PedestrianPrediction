@@ -14,6 +14,9 @@ import sys
 from utils import CVaR, CVaR_weight
 from functools import partial
 
+# Pose Estimation
+from model.poses import PoseEstimator
+
 thismodule = sys.modules[__name__]
 
 
@@ -27,12 +30,19 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         device,
         edge_types,
         log_writer=None,
+        use_poses=False,
+        args=None,
     ):
         """
         node_types: list of node_types ('VEHICLE', 'PEDESTRIAN'...)
         edge_types: list of edge types
         """
         super(MultimodalGenerativeCVAE_clique, self).__init__()
+        self.use_poses = use_poses
+        self.args = args
+        # if self.use_poses:
+        #     self.pose_estimator = PoseEstimator(args.pose_model_id, args)
+        #     self.args = args
         self.hyperparams = hyperparams
         self.env = env
         self.node_types = node_types
@@ -153,11 +163,21 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         #   Node History Encoder   #
         ############################
         for node_type in self.node_types:
-            model = getattr(
-                model_components,
-                self.hyperparams["node_pre_encode_net"][node_type]["module"],
-            )
-            enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
+            if node_type == "PEDESTRIAN" and self.args.mode == "poses-gt":
+                """
+                Use PED_pre_encode_pose for pedestrian pose estimation.
+                This model assumes that we always have pose information, i.e., dummy information in case we don't have a pose estimate.
+                Pose information has to be added flattened, i.e., [batch_size, 3, 13] --> [batch_size, 39] + 4 features from normal node history.
+                """
+                # TODO: Decide if it makes sense to change the hidden dims when using poses.
+                model = getattr(model_components, "PED_pre_encode_pose")
+                enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
+            else:
+                model = getattr(
+                    model_components,
+                    self.hyperparams["node_pre_encode_net"][node_type]["module"],
+                )
+                enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
             if (
                 self.hyperparams["use_map_encoding"]
                 and node_type in self.hyperparams["map_encoder"]
@@ -466,14 +486,20 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         batch_lane_dev,
         batch_fut_lane_dev,
         indices,
+        batch_pose_history_st=None,
     ):
 
         ##################
         # Encode History #
         ##################
-        node_history_encoded = self.encode_node_history(
-            mode, batch_state_history_st, batch_lane_dev, batch_first_timestep
-        )
+        if self.args.mode == "base":
+            node_history_encoded = self.encode_node_history(
+                mode, batch_state_history_st, batch_lane_dev, batch_first_timestep
+            )
+        elif self.args.mode == "poses-gt":
+            node_history_encoded = self.encode_node_history_with_poses(
+                mode, batch_state_history_st, batch_pose_history_st, batch_lane_dev, batch_first_timestep
+            )
 
         ##################
         # Encode Future #
@@ -538,6 +564,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         clique_lane_dev,
         clique_future_state,
         clique_fut_lane_dev,
+        clique_pose_history=None,
+        clique_pose_future_state=None,
     ):
         """
         put clique data into batches by node type
@@ -632,6 +660,22 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             )
             for nt in self.node_types
         }
+
+        # Pose Batch
+        if self.use_poses:
+            batch_state_history_pose = {
+                nt: torch.zeros([ht + 1, len(node_index[nt]), self.state_length[nt]]).to(
+                    self.device
+            )
+            for nt in self.node_types
+            }
+            batch_state_history_pose_st = {
+                nt: torch.zeros([ht + 1, len(node_index[nt]), self.state_length[nt]]).to(
+                    self.device
+            )
+            for nt in self.node_types
+            }
+
         batch_state_history_st = {
             nt: torch.zeros([ht + 1, len(node_index[nt]), self.state_length[nt]]).to(
                 self.device
@@ -654,6 +698,22 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 )
                 for nt in self.node_types
             }
+
+            # Pose Future Batch
+            if self.use_poses:
+                batch_state_future_pose = {
+                    nt: torch.zeros([ft, len(node_index[nt]), self.state_length[nt]]).to(
+                        self.device
+                    )
+                    for nt in self.node_types
+                }
+                batch_state_future_pose_st = {
+                    nt: torch.zeros([ft, len(node_index[nt]), self.state_length[nt]]).to(
+                        self.device
+                    )
+                    for nt in self.node_types
+                }
+
             batch_state_future_st = {
                 nt: torch.zeros([ft, len(node_index[nt]), self.state_length[nt]]).to(
                     self.device
@@ -674,6 +734,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_history[nt][:, idx] = torch.tensor(
                             clique_state_history[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_history_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_history[i][j]
+                            ).to(self.device)
+
                         first_timestep = clique_first_timestep[i][j]
                         x0 = batch_state_history[nt][-1, idx]
                         batch_state_history_st[nt][
@@ -707,6 +773,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_future[nt][:, idx] = torch.tensor(
                             clique_future_state[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_future_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_future_state[i][j]
+                            ).to(self.device)
+
                         batch_state_future_st[nt][
                             :last_timestep, idx
                         ] = self.rel_state_fun[nt](
@@ -722,6 +794,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_history[nt][:, idx] = torch.tensor(
                             clique_state_history[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_history_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_history[i][j]
+                            ).to(self.device)
+
                         first_timestep = clique_first_timestep[i][j]
                         x0 = batch_state_history[nt][-1, idx]
                         batch_state_history_st[nt][
@@ -737,6 +815,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_future[nt][:, idx] = torch.tensor(
                             clique_future_state[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_future_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_future_state[i][j]
+                            ).to(self.device)
+
                         batch_state_future_st[nt][
                             :last_timestep, idx
                         ] = self.rel_state_fun[nt](
@@ -752,6 +836,9 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             batch_state_future_st = None
             batch_fut_lane_dev = None
             batch_last_timestep = None
+            if self.use_poses:
+                batch_state_future_pose = None
+                batch_state_future_pose_st = None
 
             for nt in self.node_types:
                 if (
@@ -762,6 +849,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_history[nt][:, idx] = torch.tensor(
                             clique_state_history[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_history_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_history[i][j]
+                            ).to(self.device)
+
                         first_timestep = clique_first_timestep[i][j]
                         x0 = batch_state_history[nt][-1, idx]
                         batch_state_history_st[nt][
@@ -792,6 +885,12 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         batch_state_history[nt][:, idx] = torch.tensor(
                             clique_state_history[i][j]
                         ).to(self.device)
+
+                        if self.use_poses:
+                            batch_state_history_pose[nt][:, idx] = torch.tensor(
+                                clique_pose_history[i][j]
+                            ).to(self.device)
+
                         first_timestep = clique_first_timestep[i][j]
                         x0 = batch_state_history[nt][-1, idx]
                         batch_state_history_st[nt][
@@ -839,33 +938,64 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 batch_edge_first_timestep[edge_type][idx] = max(
                     clique_first_timestep[i][j], clique_first_timestep[i][k]
                 )
-
-        return (
-            batch_state_history,
-            batch_state_history_st,
-            batch_state_future,
-            batch_state_future_st,
-            batch_edge,
-            batch_first_timestep,
-            batch_last_timestep,
-            batch_edge_first_timestep,
-            batch_map,
-            batch_node_size,
-            batch_is_robot,
-            batch_lane,
-            batch_lane_st,
-            batch_lane_dev,
-            batch_fut_lane_dev,
-            (
-                node_index,
-                edge_index,
-                node_inverse_index,
-                batch_node_to_edge_index,
-                edge_to_node_index,
-                batch_edge_idx1,
-                batch_edge_idx2,
-            ),
-        )
+        if self.use_poses:
+            return (
+                batch_state_history,
+                batch_state_history_st,
+                batch_state_future,
+                batch_state_future_st,
+                batch_edge,
+                batch_first_timestep,
+                batch_last_timestep,
+                batch_edge_first_timestep,
+                batch_map,
+                batch_node_size,
+                batch_is_robot,
+                batch_lane,
+                batch_lane_st,
+                batch_lane_dev,
+                batch_fut_lane_dev,
+                batch_state_history_pose,
+                batch_state_history_pose_st,
+                batch_state_future_pose,
+                batch_state_future_pose_st,
+                (
+                    node_index,
+                    edge_index,
+                    node_inverse_index,
+                    batch_node_to_edge_index,
+                    edge_to_node_index,
+                    batch_edge_idx1,
+                    batch_edge_idx2,
+                ),
+            )
+        else:
+            return (
+                batch_state_history,
+                batch_state_history_st,
+                batch_state_future,
+                batch_state_future_st,
+                batch_edge,
+                batch_first_timestep,
+                batch_last_timestep,
+                batch_edge_first_timestep,
+                batch_map,
+                batch_node_size,
+                batch_is_robot,
+                batch_lane,
+                batch_lane_st,
+                batch_lane_dev,
+                batch_fut_lane_dev,
+                (
+                    node_index,
+                    edge_index,
+                    node_inverse_index,
+                    batch_node_to_edge_index,
+                    edge_to_node_index,
+                    batch_edge_idx1,
+                    batch_edge_idx2,
+                ),
+            )
 
     def encode_node_history(
         self, mode, batch_state_history_st, batch_lane_dev, batch_first_timestep
@@ -921,6 +1051,72 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 ).to(self.device)
 
         return batch_node_hist_enc
+    
+
+    def encode_node_history_with_poses(
+        self, mode, batch_state_history_st, batch_pose_history_st, batch_lane_dev, batch_first_timestep
+    ):
+        """
+        Encodes the nodes history with poses.
+
+        """
+        batch_node_hist_enc = dict()
+
+        for node_type in self.node_types:
+            if batch_state_history_st[node_type].nelement() > 0:
+                if (
+                    self.hyperparams["use_map_encoding"]
+                    and node_type in self.hyperparams["map_encoder"]
+                    and self.hyperparams["use_lane_info"]
+                ):
+                    pre_encoded_vec = self.node_modules[
+                        node_type + "/node_pre_encoder"
+                    ](
+                        torch.cat(
+                            (
+                                batch_state_history_st[node_type],
+                                batch_lane_dev[node_type],
+                            ),
+                            dim=-1,
+                        )
+                    )
+                else:
+                    if node_type == "PEDESTRIAN":
+                        pre_encoded_vec = self.node_modules[
+                            node_type + "/node_pre_encoder"
+                        ](
+                            torch.cat(
+                                (
+                                    batch_state_history_st[node_type],
+                                    batch_pose_history_st[node_type],
+                                ),
+                                dim=-1,
+                            )
+                        )
+
+                batch_node_hist_enc[node_type], _ = run_lstm_on_variable_length_seqs(
+                    self.node_modules[node_type + "/node_history_encoder"],
+                    original_seqs=pre_encoded_vec,
+                    lower_indices=batch_first_timestep[node_type],
+                    batch_first=False,
+                )
+
+                batch_node_hist_enc[node_type] = F.dropout(
+                    batch_node_hist_enc[node_type],
+                    p=1.0 - self.hyperparams["rnn_kwargs"]["dropout_keep_prob"],
+                    training=(mode == ModeKeys.TRAIN),
+                )  # [bs, max_time, enc_rnn_dim]
+            else:
+                batch_node_hist_enc[node_type] = torch.zeros(
+                    [
+                        batch_state_history_st[node_type].shape[0],
+                        0,
+                        self.hyperparams["enc_rnn_dim_history"],
+                    ]
+                ).to(self.device)
+
+        return batch_node_hist_enc
+
 
     def encode_edge(
         self, mode, batch_edge, batch_edge_first_timestep, batch_node_size, indices
@@ -1755,6 +1951,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         clique_lane,
         clique_lane_dev,
         clique_fut_lane_dev,
+        clique_pose_history=None,
+        clique_pose_future_state=None
     ) -> torch.Tensor:
         """
         Calculates the training loss for a batch.
@@ -1764,38 +1962,78 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         ft = clique_future_state[0][0].shape[0]
         mode = ModeKeys.TRAIN
 
-        (
-            batch_state_history,
-            batch_state_history_st,
-            batch_state_future,
-            batch_state_future_st,
-            batch_edge,
-            batch_first_timestep,
-            batch_last_timestep,
-            batch_edge_first_timestep,
-            batch_map,
-            batch_node_size,
-            batch_is_robot,
-            batch_lane,
-            batch_lane_st,
-            batch_lane_dev,
-            batch_fut_lane_dev,
-            indices,
-        ) = self.batch_clique(
-            mode,
-            clique_type,
-            clique_state_history,
-            clique_first_timestep,
-            clique_last_timestep,
-            clique_edges,
-            clique_map,
-            clique_node_size,
-            clique_is_robot,
-            clique_lane,
-            clique_lane_dev,
-            clique_future_state,
-            clique_fut_lane_dev,
-        )
+        if self.use_poses:
+            (
+                batch_state_history,
+                batch_state_history_st,
+                batch_state_future,
+                batch_state_future_st,
+                batch_edge,
+                batch_first_timestep,
+                batch_last_timestep,
+                batch_edge_first_timestep,
+                batch_map,
+                batch_node_size,
+                batch_is_robot,
+                batch_lane,
+                batch_lane_st,
+                batch_lane_dev,
+                batch_fut_lane_dev,
+                batch_pose_history,
+                batch_pose_history_st,
+                batch_pose_future_state,
+                batch_pose_future_state_st,
+                indices,
+            ) = self.batch_clique(
+                mode,
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_future_state,
+                clique_fut_lane_dev,
+                clique_pose_history,
+                clique_pose_future_state
+            )
+        else:
+            (
+                batch_state_history,
+                batch_state_history_st,
+                batch_state_future,
+                batch_state_future_st,
+                batch_edge,
+                batch_first_timestep,
+                batch_last_timestep,
+                batch_edge_first_timestep,
+                batch_map,
+                batch_node_size,
+                batch_is_robot,
+                batch_lane,
+                batch_lane_st,
+                batch_lane_dev,
+                batch_fut_lane_dev,
+                indices,
+            ) = self.batch_clique(
+                mode,
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_future_state,
+                clique_fut_lane_dev,
+            )
 
         (
             node_history_encoded,
@@ -1817,7 +2055,9 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             batch_lane_dev=batch_lane_dev,
             batch_fut_lane_dev=batch_fut_lane_dev,
             indices=indices,
+            batch_pose_history_st=batch_pose_history_st if self.use_poses else None,
         )
+
         z_list, pi_list, z_num, kl = self.encoder(
             mode,
             clique_type,
