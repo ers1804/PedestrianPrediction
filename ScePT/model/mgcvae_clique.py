@@ -1082,13 +1082,15 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                     )
                 else:
                     if node_type == "PEDESTRIAN":
+                        # TODO: Recheck if dimensions are correct!
+                        batch_s = batch_pose_history_st[node_type].shape[0]
                         pre_encoded_vec = self.node_modules[
                             node_type + "/node_pre_encoder"
                         ](
                             torch.cat(
                                 (
                                     batch_state_history_st[node_type],
-                                    batch_pose_history_st[node_type],
+                                    batch_pose_history_st[node_type].reshape(batch_s, -1),
                                 ),
                                 dim=-1,
                             )
