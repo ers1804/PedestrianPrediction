@@ -92,7 +92,8 @@
                     "--log_tag", "poses-gt-trial",
                     "--model_id", "run_2023-11-29T07-48-39-851756",
                     "--sample_to=128",
-                    "--alpha_path", "/home/erik/gitprojects/AlphaPose"
+                    "--alpha_path", "/home/erik/gitprojects/AlphaPose",
+                    "--use_processed_data"
                     ], // Only if data stays the same (e.g., ped only scenes)
         },
     ]
