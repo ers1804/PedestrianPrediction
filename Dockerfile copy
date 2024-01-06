@@ -4,10 +4,7 @@ ARG PYTHON_VERSION=3.8
 RUN apt-get update
 RUN apt-get install htop -y
 RUN apt-get install screen -y
-# Added for poses
-#####
-RUN apt-get install libyaml-dev -y
-#####
+
 RUN pip install \
 seaborn==0.11.1 \
 pyquaternion==0.9.9 \
@@ -20,15 +17,6 @@ nuscenes-devkit==1.1.2 \
 pykalman==0.9.5 \
 python-louvain \
 osqp \
-# Addded for poses
-#####
-cython \
-gin-config \
-logging \
-absl-py \
-wandb \
-# see if we need this to run: waymo-open-dataset-tf-2-11-0==1.6.0 \
-#####
 pip install networkx[default]
 
 RUN pip uninstall tensorboard nvidia-tensorboard -y
@@ -51,13 +39,3 @@ COPY processed_nuScenes_train.pkl .
 COPY processed_nuScenes_val.pkl .
 COPY README.md .
 COPY requirements.txt .
-# Added for poses
-#####
-COPY processed_poses_gt_nuScenes_train.pkl .
-COPY processed_poses_gt_nuScenes_val.pkl .
-COPY /home/erik/gitprojects/AlphaPose ./alphapose
-
-
-# After copying AlphaPose
-RUN python ./alphapose/setup.py build develop
-#####

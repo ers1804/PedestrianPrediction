@@ -267,7 +267,8 @@ class clique_guided_policy_net(nn.Module):
 
         des_traj = dict()
         for nt in self.node_types:
-
+            
+            #TODO: Decide if we should also include poses here!
             obs_lstm_h[nt] = self.obs_lstm_h0_net[nt](batch_state_history_st[nt][-1]).view(1,len(node_index[nt]),self.obs_lstm_hidden_dim).to(self.device)
             obs_lstm_c[nt] = self.obs_lstm_c0_net[nt](batch_state_history_st[nt][-1]).view(1,len(node_index[nt]),self.obs_lstm_hidden_dim).to(self.device)
             
