@@ -162,22 +162,37 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         ############################
         #   Node History Encoder   #
         ############################
+        # Add encoder for poses
+        model = getattr(model_components, "PED_pre_encode_pose")
+        enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
+        self.add_submodule(
+            'PEDESTRIAN' + "/node_pre_encoder_poses",
+            model_if_absent=model(
+                enc_dim, self.device, use_lane_info=self.hyperparams["use_lane_info"]
+            ),
+        )
         for node_type in self.node_types:
-            if node_type == "PEDESTRIAN" and self.args.mode == "poses-gt":
-                """
-                Use PED_pre_encode_pose for pedestrian pose estimation.
-                This model assumes that we always have pose information, i.e., dummy information in case we don't have a pose estimate.
-                Pose information has to be added flattened, i.e., [batch_size, 3, 13] --> [batch_size, 39] + 4 features from normal node history.
-                """
-                # TODO: Decide if it makes sense to change the hidden dims when using poses.
-                model = getattr(model_components, "PED_pre_encode_pose")
-                enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
-            else:
-                model = getattr(
-                    model_components,
-                    self.hyperparams["node_pre_encode_net"][node_type]["module"],
-                )
-                enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
+            # if node_type == "PEDESTRIAN" and self.args.mode == "poses-gt":
+            #     """
+            #     Use PED_pre_encode_pose for pedestrian pose estimation.
+            #     This model assumes that we always have pose information, i.e., dummy information in case we don't have a pose estimate.
+            #     Pose information has to be added flattened, i.e., [batch_size, 3, 13] --> [batch_size, 39] + 4 features from normal node history.
+            #     """
+            #     # TODO: Decide if it makes sense to change the hidden dims when using poses.
+            #     model = getattr(model_components, "PED_pre_encode_pose")
+            #     enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
+            #     self.add_submodule(
+            #         node_type + "/node_pre_encoder_poses",
+            #         model_if_absent=model(
+            #             enc_dim, self.device, use_lane_info=self.hyperparams["use_lane_info"]
+            #         ),
+            #     )
+            # else:
+            model = getattr(
+                model_components,
+                self.hyperparams["node_pre_encode_net"][node_type]["module"],
+            )
+            enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
             if (
                 self.hyperparams["use_map_encoding"]
                 and node_type in self.hyperparams["map_encoder"]
@@ -506,15 +521,25 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         # Encode Future #
         ##################
         if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-            node_future_encoded = self.encode_node_future(
-                mode,
-                batch_state_history_st,
-                batch_lane_dev,
-                batch_state_future_st,
-                batch_fut_lane_dev,
-                batch_last_timestep,
-            )
-
+            if self.args.mode == "base":
+                node_future_encoded = self.encode_node_future(
+                    mode,
+                    batch_state_history_st,
+                    batch_lane_dev,
+                    batch_state_future_st,
+                    batch_fut_lane_dev,
+                    batch_last_timestep,
+                )
+            elif self.args.mode == "poses-gt":
+                node_future_encoded = self.encode_node_future_with_poses(
+                    mode,
+                    batch_state_history_st,
+                    batch_lane_dev,
+                    batch_state_future_st,
+                    batch_fut_lane_dev,
+                    batch_last_timestep,
+                    batch_pose_history,
+                )
         else:
             node_future_encoded = None
 
@@ -665,14 +690,16 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         # Pose Batch
         if self.use_poses:
             batch_state_history_pose = {
-                'PEDESTRIAN': torch.zeros([ht + 1, len(node_index['PEDESTRIAN']), 13*3]).to(
+                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3]).to(
                     self.device
             )
+            for nt in self.node_types
             }
             batch_state_history_pose_st = {
-                'PEDESTRIAN': torch.zeros([ht + 1, len(node_index['PEDESTRIAN']), 13*3]).to(
+                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3]).to(
                     self.device
             )
+            for nt in self.node_types
             }
 
         batch_state_history_st = {
@@ -701,14 +728,16 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             # Pose Future Batch
             if self.use_poses:
                 batch_state_future_pose = {
-                    'PEDESTRIAN': torch.zeros([ft, len(node_index['PEDESTRIAN']), 13*3]).to(
+                    nt: torch.zeros([ft, len(node_index[nt]), 13*3]).to(
                         self.device
                     )
+                    for nt in self.node_types
                 }
                 batch_state_future_pose_st = {
-                    'PEDESTRIAN': torch.zeros([ft, len(node_index['PEDESTRIAN']), 13*3]).to(
+                    nt: torch.zeros([ft, len(node_index[nt]), 13*3]).to(
                         self.device
                     )
+                    for nt in self.node_types
                 }
 
             batch_state_future_st = {
@@ -736,7 +765,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         # Flatten the pose tensor to achieve 13*3 length
                         if self.use_poses:
                             batch_state_history_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_history[i][j])
+                                clique_pose_history[i][j].reshape(ht + 1, -1)
                             ).to(self.device)
 
                         first_timestep = clique_first_timestep[i][j]
@@ -776,7 +805,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         # Flatten the pose tensor to achieve 13*3 length
                         if self.use_poses:
                             batch_state_future_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_future_state[i][j])
+                                #clique_pose_future_state[i][j].reshape(ft, -1)
+                                np.zeros((ft, 39))
                             ).to(self.device)
 
                         batch_state_future_st[nt][
@@ -797,7 +827,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                         if self.use_poses:
                             batch_state_history_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_history[i][j])
+                                clique_pose_history[i][j].reshape(ht + 1, -1)
                             ).to(self.device)
 
                         first_timestep = clique_first_timestep[i][j]
@@ -818,7 +848,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                         if self.use_poses:
                             batch_state_future_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_future_state[i][j])
+                                #clique_pose_future_state[i][j].reshape(ft, -1)
+                                np.zeros((ft, 39))
                             ).to(self.device)
 
                         batch_state_future_st[nt][
@@ -852,7 +883,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                         if self.use_poses:
                             batch_state_history_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_history[i][j])
+                                clique_pose_history[i][j].reshape(ht + 1, -1)
                             ).to(self.device)
 
                         first_timestep = clique_first_timestep[i][j]
@@ -888,7 +919,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                         if self.use_poses:
                             batch_state_history_pose[nt][:, idx] = torch.tensor(
-                                torch.flatten(clique_pose_history[i][j])
+                                clique_pose_history[i][j].reshape(ht + 1, -1)
                             ).to(self.device)
 
                         first_timestep = clique_first_timestep[i][j]
@@ -1084,9 +1115,9 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                     # Only needed here as PEDESTRIAN is not part of map_encoder hyperparam
                     if node_type == "PEDESTRIAN":
                         # TODO: Recheck if dimensions are correct!
-                        batch_s = batch_pose_history[node_type].shape[0]
+                        #batch_s = batch_pose_history[node_type].shape[0]
                         pre_encoded_vec = self.node_modules[
-                            node_type + "/node_pre_encoder"
+                            node_type + "/node_pre_encoder_poses"
                         ](
                             torch.cat(
                                 (
@@ -1259,6 +1290,115 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 encoded_future[node_type] = None
 
         return encoded_future
+    
+
+    def encode_node_future_with_poses(
+        self,
+        mode,
+        batch_state_history_st,
+        batch_lane_dev,
+        batch_state_future_st,
+        batch_fut_lane_dev,
+        batch_last_timestep,
+        batch_pose_history,
+    ) -> dict:
+        """
+        Encodes the node future (during training) using a bi-directional LSTM
+        """
+        encoded_future = dict()
+        for node_type in self.node_types:
+            if (
+                self.hyperparams["use_map_encoding"]
+                and node_type in self.hyperparams["map_encoder"]
+                and self.hyperparams["use_lane_info"]
+            ):
+                encoded_history_vec = self.node_modules[
+                    node_type + "/node_pre_encoder"
+                ](
+                    torch.cat(
+                        (
+                            batch_state_history_st[node_type][-1],
+                            batch_lane_dev[node_type][-1],
+                        ),
+                        dim=-1,
+                    )
+                )
+            else:
+                # Only needed here as PEDESTRIAN is not part of map_encoder hyperparam
+                if node_type == "PEDESTRIAN":
+                    # TODO: Recheck if dimensions are correct!
+                    #batch_s = batch_pose_history[node_type].shape[0]
+                    encoded_history_vec = self.node_modules[
+                        node_type + "/node_pre_encoder_poses"
+                    ](
+                        torch.cat(
+                            (
+                                batch_state_history_st[node_type][-1],
+                                batch_pose_history[node_type][-1],
+                            ),
+                            dim=-1,
+                        )
+                    )
+                # encoded_history_vec = self.node_modules[
+                #     node_type + "/node_pre_encoder"
+                # ](batch_state_history_st[node_type][-1])
+
+            initial_h_model = self.node_modules[
+                node_type + "/node_future_encoder/initial_h"
+            ]
+            initial_c_model = self.node_modules[
+                node_type + "/node_future_encoder/initial_c"
+            ]
+
+            # Here we're initializing the forward hidden states,
+            # but zeroing the backward ones.
+            initial_h = initial_h_model(encoded_history_vec)
+            initial_h = torch.stack(
+                [initial_h, torch.zeros_like(initial_h, device=self.device)], dim=0
+            )
+            initial_c = initial_c_model(encoded_history_vec)
+            initial_c = torch.stack(
+                [initial_c, torch.zeros_like(initial_c, device=self.device)], dim=0
+            )
+
+            initial_state = (initial_h, initial_c)
+            if (
+                self.hyperparams["use_map_encoding"]
+                and node_type in self.hyperparams["map_encoder"]
+                and self.hyperparams["use_lane_info"]
+            ):
+                encoded_future_vec = self.node_modules[node_type + "/node_pre_encoder"](
+                    torch.cat(
+                        (
+                            batch_state_future_st[node_type],
+                            batch_fut_lane_dev[node_type],
+                        ),
+                        dim=-1,
+                    )
+                )
+            else:
+                encoded_future_vec = self.node_modules[node_type + "/node_pre_encoder"](
+                    batch_state_future_st[node_type]
+                )
+
+            if encoded_future_vec.nelement() > 0:
+                _, state = run_lstm_on_variable_length_seqs(
+                    self.node_modules[node_type + "/node_future_encoder"],
+                    original_seqs=encoded_future_vec,
+                    upper_indices=batch_last_timestep[node_type],
+                    batch_first=False,
+                )
+                state = unpack_RNN_state(state)
+                encoded_future[node_type] = F.dropout(
+                    state,
+                    p=1.0 - self.hyperparams["rnn_kwargs"]["dropout_keep_prob"],
+                    training=(mode == ModeKeys.TRAIN),
+                )
+            else:
+                encoded_future[node_type] = None
+
+        return encoded_future
+
 
     def encoder(
         self,

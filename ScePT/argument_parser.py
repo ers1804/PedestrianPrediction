@@ -295,4 +295,8 @@ parser.add_argument("--alpha_path",
                     type=str,
                     default="/home/erik/gitprojects/AlphaPose",
                     help="Path to AlphaPose")
+parser.add_argument("--pose_runs",
+                    type=str,
+                    default="./ScePT/poses/runs",
+                    help="Path to pose runs")
 args = parser.parse_args()

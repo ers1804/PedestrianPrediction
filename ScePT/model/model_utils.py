@@ -397,7 +397,7 @@ class PED_pre_encode(nn.Module):
 # Pre-encode net for joint encoding of pose and normal state history
 class PED_pre_encode_pose(nn.Module):
     def __init__(self, enc_dim, device, hidden_dim=None, use_lane_info=False):
-        super(PED_pre_encode, self).__init__()
+        super(PED_pre_encode_pose, self).__init__()
         self.device = device
         if hidden_dim is None:
             self.FC = simplelinear(4+(3*13), enc_dim, device=device)

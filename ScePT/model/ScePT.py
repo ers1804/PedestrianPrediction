@@ -21,6 +21,7 @@ class ScePT(nn.Module):
         self.log_writer = log_writer
         self.device = device
         self.curr_iter = 0
+        self.args = args
 
         self.model_registrar = model_registrar
         self.node_models_dict = nn.ModuleDict()

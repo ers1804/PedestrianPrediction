@@ -300,7 +300,7 @@ def train(rank, args):
         num_nodes += len(scene.nodes)
     print(num_nodes)
 
-    eval_data = clique_dataset(eval_cliques)
+    eval_data = clique_dataset(eval_cliques, args.mode)
     eval_data_loader = DataLoader(
         eval_data,
         pin_memory=True,
@@ -625,7 +625,7 @@ def train(rank, args):
 
 def spmd_main(local_rank):
     # Parse Gin config for pose estimation
-    gin.parse_config_file('/home/erik/ScePT/ScePT/poses/runs/' + args.model_id + '/config_operative.gin')
+    gin.parse_config_file(args.pose_runs + '/' + args.model_id + '/config_operative.gin')
 
     if torch.cuda.is_available():
         backend = "nccl"
