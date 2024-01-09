@@ -26,10 +26,7 @@ osqp \
 gin-config \
 #logging \
 absl-py \
-wandb \
-pandas==1.2.0 \
-tensorflow==2.11.0 \
-waymo-open-dataset-tf-2-11-0==1.6.0 \
+wandb 
 # see if we need this to run: waymo-open-dataset-tf-2-11-0==1.6.0 \
 #####
 RUN pip install networkx[default]
@@ -59,9 +56,14 @@ COPY requirements.txt .
 COPY processed_poses_gt_nuScenes_train.pkl .
 COPY processed_poses_gt_nuScenes_val.pkl .
 COPY AlphaPose ./alphapose
-COPY keypoint_data.py /usr/local/lib/python3.8/dist-packages/waymo_open_dataset/utils/keypoint_data.py
 
 
 # After copying AlphaPose
 RUN cd alphapose && python setup.py build develop
 #####
+
+RUN pip install pandas \
+tensorflow==2.11.0 \
+waymo-open-dataset-tf-2-11-0==1.6.0
+RUN pip install --upgrade numpy
+COPY keypoint_data.py /usr/local/lib/python3.8/dist-packages/waymo_open_dataset/utils/

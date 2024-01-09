@@ -1560,8 +1560,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             log_pis_p = torch.clamp(log_pis_p, min=self.hyperparams["log_pi_clamp"])
             # z_sel: greedily selected latent
             # z_close: modes with large pi but passed due to lack of diversity score, may be selected if there is no latent with better diversity score.
-            z_sel = np.zeros(log_pis_p.shape[0], dtype=np.bool)
-            z_close = np.zeros(log_pis_p.shape[0], dtype=np.bool)
+            z_sel = np.zeros(log_pis_p.shape[0], dtype=bool)
+            z_close = np.zeros(log_pis_p.shape[0], dtype=bool)
             if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
                 state_fut_enc = list()
                 for j in range(len(clique_state_enc[i])):

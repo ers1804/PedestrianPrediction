@@ -95,6 +95,7 @@
                     "--alpha_path", "/home/erik/gitprojects/AlphaPose",
                     "--use_processed_data"
                     ], // Only if data stays the same (e.g., ped only scenes)
+                    // For Terminal in Docker: torchrun --nproc_per_node=1 ./ScePT/train.py --train_data_dict nuScenes_train.pkl --eval_data_dict nuScenes_val.pkl --offline_scene_graph yes --preprocess_workers 6 --log_dir ./experiments/nuScenes/models --train_epochs 5 --conf ./config/clique_nusc_pose_gt1_config.json --indexing_workers=6 --eval_batch_size=256 --batch_size=256 --vis_every=1 --map_encoding --incl_robot_node --eval_every=1 --data_dir ./experiments/processed_pose_gt1 --mode poses-gt --log_tag poses-gt-trial --model_id run_2023-11-29T07-48-39-851756 --sample_to=128 --alpha_path ./alphapose --use_processed_data
         },
     ]
 }
