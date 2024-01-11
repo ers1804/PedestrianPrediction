@@ -610,6 +610,10 @@ def train(rank, args):
 
             if rank == 0 and not args.debug:
                 log_writer.add_scalar(f"eval/loss", eval_loss, curr_iter)
+                log_writer.add_scalar(f"eval/ADE_ped", ADE['PEDESTRIAN'], curr_iter)
+                log_writer.add_scalar(f"eval/ADE_veh", ADE['VEHICLE'], curr_iter)
+                log_writer.add_scalar(f"eval/FDE_ped", np.mean(FDE['PEDESTRIAN']), curr_iter)
+                log_writer.add_scalar(f"eval/FDE_veh", np.mean(FDE['VEHICLE']), curr_iter)
 
         if rank == 0 and (
             args.save_every is not None

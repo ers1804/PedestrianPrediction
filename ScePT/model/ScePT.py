@@ -150,30 +150,32 @@ class ScePT(nn.Module):
         return loss
 
     def eval_loss(self, batch, num_samples=None, criterion=0):
-        (
-            clique_type,
-            clique_state_history,
-            clique_first_timestep,
-            clique_last_timestep,
-            clique_edges,
-            clique_future_state,
-            clique_map,
-            clique_node_size,
-            clique_is_robot,
-            clique_lane,
-            clique_lane_dev,
-            clique_fut_lane_dev,
-        ) = batch
-
-        (
-            loss,
-            ADE,
-            FDE,
-            ADE_count,
-            FDE_count,
-            coll_score,
-            nt_count,
-        ) = self.model.eval_loss(
+        if self.use_poses:
+            (
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_future_state,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_fut_lane_dev,
+                clique_pose_history,
+                clique_pose_future_state
+            ) = batch
+            (
+                loss,
+                ADE,
+                FDE,
+                ADE_count,
+                FDE_count,
+                coll_score,
+                nt_count,
+            ) = self.model.eval_loss(
             clique_type=clique_type,
             clique_state_history=clique_state_history,
             clique_first_timestep=clique_first_timestep,
@@ -186,9 +188,49 @@ class ScePT(nn.Module):
             clique_lane=clique_lane,
             clique_lane_dev=clique_lane_dev,
             clique_fut_lane_dev=clique_fut_lane_dev,
-            num_samples=num_samples,
-            criterion=criterion,
-        )
+            clique_pose_history=clique_pose_history,
+            clique_pose_future_state=clique_pose_future_state
+            )
+        else:
+            (
+                clique_type,
+                clique_state_history,
+                clique_first_timestep,
+                clique_last_timestep,
+                clique_edges,
+                clique_future_state,
+                clique_map,
+                clique_node_size,
+                clique_is_robot,
+                clique_lane,
+                clique_lane_dev,
+                clique_fut_lane_dev,
+            ) = batch
+
+            (
+                loss,
+                ADE,
+                FDE,
+                ADE_count,
+                FDE_count,
+                coll_score,
+                nt_count,
+            ) = self.model.eval_loss(
+                clique_type=clique_type,
+                clique_state_history=clique_state_history,
+                clique_first_timestep=clique_first_timestep,
+                clique_last_timestep=clique_last_timestep,
+                clique_edges=clique_edges,
+                clique_future_state=clique_future_state,
+                clique_map=clique_map,
+                clique_node_size=clique_node_size,
+                clique_is_robot=clique_is_robot,
+                clique_lane=clique_lane,
+                clique_lane_dev=clique_lane_dev,
+                clique_fut_lane_dev=clique_fut_lane_dev,
+                num_samples=num_samples,
+                criterion=criterion,
+            )
 
         ADE_np = {nt: ADE[nt].cpu().detach().numpy() for nt in self.model.node_types}
         FDE_np = {nt: FDE[nt].cpu().detach().numpy() for nt in self.model.node_types}
@@ -217,25 +259,45 @@ class ScePT(nn.Module):
             time_steps=timesteps,
             time_series=True,
             nusc_path=nusc_path,
+            mode=self.args.mode,
+            args=self.args
         )
         if len(batches) == 0:
             return None, None, None, None, None, None, None, None, None
         results = list()
         for batch in batches:
-            (
-                clique_type,
-                clique_state_history,
-                clique_first_timestep,
-                clique_last_timestep,
-                clique_edges,
-                clique_future_state,
-                clique_map,
-                clique_node_size,
-                clique_is_robot,
-                clique_lane,
-                clique_lane_dev,
-                clique_fut_lane_dev,
-            ) = zip(*batch)
+            if self.args.mode == "base":
+                (
+                    clique_type,
+                    clique_state_history,
+                    clique_first_timestep,
+                    clique_last_timestep,
+                    clique_edges,
+                    clique_future_state,
+                    clique_map,
+                    clique_node_size,
+                    clique_is_robot,
+                    clique_lane,
+                    clique_lane_dev,
+                    clique_fut_lane_dev,
+                ) = zip(*batch)
+            else:
+                (
+                    clique_type,
+                    clique_state_history,
+                    clique_first_timestep,
+                    clique_last_timestep,
+                    clique_edges,
+                    clique_future_state,
+                    clique_map,
+                    clique_node_size,
+                    clique_is_robot,
+                    clique_lane,
+                    clique_lane_dev,
+                    clique_fut_lane_dev,
+                    clique_pose_history,
+                    clique_pose_future_state,
+                ) = zip(*batch)
             bs = len(clique_type)
             scene_maps = list()
             scene_pts = list()
@@ -285,6 +347,8 @@ class ScePT(nn.Module):
                 None,
                 ft,
                 num_samples,
+                clique_pose_history=clique_pose_history if self.args.mode == "poses-gt" else None,
+                clique_pose_future_state=clique_pose_future_state if self.args.mode == "poses-gt" else None,
             )
 
             results.append(
