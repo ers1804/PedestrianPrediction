@@ -880,7 +880,7 @@ def sim_IRL(
         matplotlib.use("Agg")
     num_nodes = len(scene.nodes)
     T = scene.timesteps
-    presence_table = np.zeros([num_nodes, T], dtype=np.bool)
+    presence_table = np.zeros([num_nodes, T], dtype=bool)
 
     for i in range(0, num_nodes):
         presence_table[i][

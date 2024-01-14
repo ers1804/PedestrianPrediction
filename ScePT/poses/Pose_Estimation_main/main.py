@@ -29,7 +29,7 @@ torch.manual_seed(42)
 flags.DEFINE_string("model_id", "", "Name or load a run.")
 flags.DEFINE_string('run', 'all', 'Specify whether to train or evaluate a model (all, vis).')
 flags.DEFINE_string("dataset", "waymo_3d_2d_projections_supervised", "Dataset to train on. NOTE: Weakly-supervised datasets directly imply the learning paradigm. Was: waymo_alphapose_weakly_supervised")
-flags.DEFINE_string('config', '/home/erik/ScePT/ScePT/poses/Pose_Estimation_main/configs/config.gin', 'Config file that should be loaded.')
+flags.DEFINE_string('config', './ScePT/poses/Pose_Estimation_main/configs/config.gin', 'Config file that should be loaded.') #/home/erik/ScePT/ScePT/poses/Pose_Estimation_main/configs/config.gin'
 flags.DEFINE_integer("device", 0, "Cuda device to use (-1 for cpu).")
 flags.DEFINE_string("model_type", "Lidar2dKeypointFusion", "Model type to be used for prediction.")
 flags.DEFINE_string("suffix", "", "suffix extension for current run.")
@@ -43,8 +43,8 @@ flags.DEFINE_list("overwrite_gin_args", "", "Overwrite gin parameters via comman
 # AlphaPose
 ################
 flags.DEFINE_boolean("use_alpha", True, "Use Alphapose to generate 2D keypoints during training.")
-flags.DEFINE_string("alpha_cfg", "/home/erik/gitprojects/AlphaPose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "AlphaPose config file.")
-flags.DEFINE_string("alpha_checkpoint", "/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "AlphaPose checkpoint file.")
+flags.DEFINE_string("alpha_cfg", "./alphapose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "AlphaPose config file.") #"/home/erik/gitprojects/AlphaPose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml"
+flags.DEFINE_string("alpha_checkpoint", "./alphapose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "AlphaPose checkpoint file.") #"/home/erik/gitprojects/AlphaPose/pretrained_models/noface_fast50_dcn_combined_256x192.pth"
 flags.DEFINE_list("gpus", ["0"], "List of GPUs to use for AlphaPose.")
 flags.DEFINE_string("detector", "yolox-l", "Detector to use for AlphaPose.")
 flags.DEFINE_integer("detbatch", 1, "Batch size for AlphaPose detector.")

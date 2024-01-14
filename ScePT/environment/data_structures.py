@@ -164,7 +164,7 @@ class RingBuffer(Sequence):
         # handle simple (b[1]) and basic (b[np.array([1, 2, 3])]) fancy indexing specially
         if not isinstance(item, tuple):
             item_arr = np.asarray(item)
-            if issubclass(item_arr.dtype.type, np.integer):
+            if issubclass(item_arr.dtype.type, int): #np.integer
                 item_arr = (item_arr + self._left_index) % self._capacity
                 return self._arr[item_arr]
 

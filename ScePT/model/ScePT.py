@@ -262,6 +262,7 @@ class ScePT(nn.Module):
             mode=self.args.mode,
             args=self.args
         )
+        print("Batching worked!")
         if len(batches) == 0:
             return None, None, None, None, None, None, None, None, None
         results = list()

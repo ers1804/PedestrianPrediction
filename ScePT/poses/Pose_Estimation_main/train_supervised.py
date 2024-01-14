@@ -13,6 +13,7 @@ import numpy as np
 # AlphaPose
 ################
 sys.path.append('/home/erik/gitproject/AlphaPose')
+sys.path.append('./alphapose')
 
 from alphapose.models import builder
 from alphapose.utils.config import update_config

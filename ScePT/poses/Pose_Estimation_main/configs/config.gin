@@ -2,7 +2,8 @@
 ###############
 ### DATASET ###
 ###############
-load.data_src = "/home/erik/ssd2/datasets/waymo_pose/"
+#"/home/erik/ssd2/datasets/waymo_pose/"
+load.data_src = "./publicdatasets/waymo_perception/waymo_pose/"
 load.batch_size = 32
 
 WaymoOpenDataset.pc_min_size = 75

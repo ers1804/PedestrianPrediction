@@ -299,4 +299,8 @@ parser.add_argument("--pose_runs",
                     type=str,
                     default="./ScePT/poses/runs",
                     help="Path to pose runs")
+parser.add_argument("--pose_path",
+                    type=str,
+                    default="./ScePT/poses/runs",
+                    help="Path to pose runs")
 args = parser.parse_args()

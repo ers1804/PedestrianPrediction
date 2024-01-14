@@ -134,11 +134,11 @@ class TemporalSceneGraph(object):
 
         position_cube = np.full((total_timesteps, N, 2), np.nan)
 
-        adj_cube = np.zeros((total_timesteps, N, N), dtype=np.int8)
-        dist_cube = np.zeros((total_timesteps, N, N), dtype=np.float)
+        adj_cube = np.zeros((total_timesteps, N, N), dtype=int) #np.int8
+        dist_cube = np.zeros((total_timesteps, N, N), dtype=float)
 
-        node_type_mat = np.zeros((N, N), dtype=np.int8)
-        node_attention_mat = np.zeros((N, N), dtype=np.float)
+        node_type_mat = np.zeros((N, N), dtype=int) #np.int8
+        node_attention_mat = np.zeros((N, N), dtype=float)
 
         for node_idx, node in enumerate(nodes):
             if online:
@@ -163,7 +163,7 @@ class TemporalSceneGraph(object):
             # This is accepted as nan <= x evaluates to False
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                adj_matrix = (dists <= node_attention_mat).astype(np.int8) * node_type_mat
+                adj_matrix = (dists <= node_attention_mat).astype(int) * node_type_mat #np.int8
 
             # Remove self-loops.
             np.fill_diagonal(adj_matrix, 0)

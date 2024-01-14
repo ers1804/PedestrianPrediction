@@ -36,7 +36,7 @@ from pathos.multiprocessing import ProcessPool as Pool
 from torch.cuda.amp import autocast, GradScaler
 import model.dynamics as dynamic_module
 
-sys.path.append('/home/erik/ScePT/ScePT/poses/Pose_Estimation_main')
+sys.path.append('./ScePT/poses/Pose_Estimation_main')
 from poses.Pose_Estimation_main.models.supervised.fusion.lidar_2dkeypoint import Lidar2dKeypointFusionmodel
 import gin
 from poses.Pose_Estimation_main.utils.utils_params import gen_run_folder
@@ -527,8 +527,9 @@ def train(rank, args):
 
                         log_writer.add_figure("train/prediction", fig, epoch)
                         del fig, ax
-                except:
+                except Exception as error:
                     print("visualization failed")
+                    print(error)
 
                 # Predict random timestep to plot for eval data set
                 # if args.scene_freq_mult_viz:

@@ -115,7 +115,7 @@ class Adaption_Dataset(WaymoOpenDataset):
 
         occlusions_labeled = data['keypoints_2d_arr'][:, -1]
 
-        mask_2D_labeled = np.ones(keypoints_labeled.shape, dtype=np.bool)
+        mask_2D_labeled = np.ones(keypoints_labeled.shape, dtype=bool)
         mask_2D_labeled[data['mask_2d']] = False
 
                 # direct_projection[~mask_G[:, :, 0]] = torch.tensor(50000)

@@ -160,9 +160,9 @@ class MultiNode(Node):
         self.first_timestep = min(node.first_timestep for node in self.nodes_list)
         self._last_timestep = max(node.last_timestep for node in self.nodes_list)
 
-        starts = np.array([node.first_timestep for node in self.nodes_list], dtype=np.int64)
-        ends = np.array([node.last_timestep for node in self.nodes_list], dtype=np.int64)
-        ids = np.arange(len(self.nodes_list), dtype=np.int64)
+        starts = np.array([node.first_timestep for node in self.nodes_list], dtype=int) #np.int64
+        ends = np.array([node.last_timestep for node in self.nodes_list], dtype=int) #np.int64
+        ids = np.arange(len(self.nodes_list), dtype=int) #np.int64
         self.interval_tree = NCLS(starts, ends, ids)
 
     @staticmethod

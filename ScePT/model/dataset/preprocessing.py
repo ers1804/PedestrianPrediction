@@ -427,9 +427,10 @@ def obtain_clique_from_scene(
     args=None,
 ):
     pose_estimator = PoseEstimator(args.model_id, args)
+    print("Pose estimator loaded")
     num_nodes = len(scene.nodes)
     T = scene.timesteps
-    presence_table = np.zeros([num_nodes, T], dtype=np.bool)
+    presence_table = np.zeros([num_nodes, T], dtype=bool)
     state = hyperparams["state"]
     pose_state = hyperparams["poses"]
     if dynamics is not None and con is not None:
@@ -475,8 +476,8 @@ def obtain_clique_from_scene(
         active_nodes_future_state = list()
         active_nodes_lane_dev = list()
         active_nodes_fut_lane_dev = list()
-        first_timestep = np.zeros(active_nodes.shape[0], dtype=np.int)
-        last_timestep = ft * np.ones(active_nodes.shape[0], dtype=np.int)
+        first_timestep = np.zeros(active_nodes.shape[0], dtype=int)
+        last_timestep = ft * np.ones(active_nodes.shape[0], dtype=int)
         active_deflt_traj = list()
         for i in range(0, active_nodes.shape[0]):
 
@@ -1301,7 +1302,7 @@ def get_IRL_data_from_scene(
     num_nodes = len(scene.nodes)
     safety_horizon = hyperparams["safety_horizon"]
     T = scene.timesteps
-    presence_table = np.zeros([num_nodes, T], dtype=np.bool)
+    presence_table = np.zeros([num_nodes, T], dtype=bool)
     state = hyperparams["state"]
     lane_info = hyperparams["lane_info"]
     if scene.nusc_map is not None:
@@ -1328,7 +1329,7 @@ def get_IRL_data_from_scene(
         active_nodes_state_history = list()
         active_nodes_input = list()
         active_nodes_lane_dev = list()
-        first_timestep = np.zeros(active_idx.shape[0], dtype=np.int)
+        first_timestep = np.zeros(active_idx.shape[0], dtype=int)
         active_deflt_traj = list()
         active_nodes_size = list()
         active_nodes_lane = list()
