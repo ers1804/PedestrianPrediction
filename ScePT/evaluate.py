@@ -348,7 +348,14 @@ def eval_statistics(rank):
         nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
-    processed_eval_file = "processed_" + args.eval_data_dict
+    
+    if args.mode == "poses-gt":
+        processed_eval_file = "processed_poses_gt_" + args.eval_data_dict
+    elif args.mode == "poses-pred":
+        processed_eval_file = "processed_poses_det_" + args.eval_data_dict
+    else:
+        processed_eval_file = "processed_" + args.eval_data_dict
+    #processed_eval_file = "processed_" + args.eval_data_dict
 
     model_dir = os.path.join(args.log_dir, args.log_tag + args.trained_model_dir)
     model_registrar = ModelRegistrar(model_dir, args.device)
@@ -360,7 +367,7 @@ def eval_statistics(rank):
     hyperparams["incl_robot_node"] = args.incl_robot_node
     hyperparams["batch_size"] = args.batch_size
     hyperparams["edge_encoding"] = not args.no_edge_encoding
-    ScePT_model = ScePT(model_registrar, hyperparams, None, args.device)
+    ScePT_model = ScePT(model_registrar, hyperparams, None, args.device, args=args, use_poses=False if args.mode=="base" else True)
 
     model_registrar.load_models(iter_num=args.iter_num)
     if "default_con" in hyperparams["dynamic"]["PEDESTRIAN"]:
@@ -414,9 +421,16 @@ def eval_statistics(rank):
         collate_fn=clique_collate,
         batch_size=hyperparams["batch_size"],
         shuffle=True,
+        num_workers=args.num_workers,
     )
 
-    num_sample_list = [1, 2, 3, 5, 10]
+    num_sample_list = [1, 2, 3, 5, 6, 10, 20]
+
+    eval_result = dict()
+    for nt in env.node_type_list:
+        eval_result[nt] = dict()
+        for sample in num_sample_list:
+            eval_result[nt][sample] = dict()
 
     for num_samples in num_sample_list:
         total_ADE = {nt: 0 for nt in env.node_type_list}
@@ -454,9 +468,19 @@ def eval_statistics(rank):
                     f"L: {eval_loss:.2f},ADE: {ADE[nt]:.2f},FDE: {FDE[nt][-1]:.2f}"
                 )
         for nt in env.node_type_list:
-            print(f"Average ADE: {total_ADE[nt]/total_ADE_count[nt]}")
-            print(f"Average FDE: {total_FDE[nt]/total_FDE_count[nt]}")
-            print(f"Average collision score: {total_coll_score[nt]/total_nt_count[nt]}")
+            average_ade = total_ADE[nt]/total_ADE_count[nt]
+            average_fde = total_FDE[nt]/total_FDE_count[nt]
+            average_coll = total_coll_score[nt]/total_nt_count[nt]
+            eval_result[nt][num_samples]["ADE"] = average_ade
+            eval_result[nt][num_samples]["FDE"] = average_fde.tolist()
+            eval_result[nt][num_samples]["coll_score"] = average_coll.tolist()
+            print(f"Node Type: {nt}")
+            print(f"Average ADE: {average_ade}")
+            print(f"Average FDE: {average_fde}")
+            print(f"Average collision score: {average_coll}")
+        
+    with open("eval_results_" + args.mode + "_" + args.trained_model_dir + ".json", "w") as f:
+        json.dump(eval_result, f)
 
 
 def plot_snapshot(rank):
@@ -482,7 +506,7 @@ def plot_snapshot(rank):
     # hyperparams['max_clique_size'] = 8
 
     hyperparams["edge_encoding"] = not args.no_edge_encoding
-    ScePT_model = ScePT(model_registrar, hyperparams, None, args.device)
+    ScePT_model = ScePT(model_registrar, hyperparams, None, args.device, args=args, use_poses=False if args.mode=="base" else True)
     model_registrar.load_models(iter_num=args.iter_num)
     model_registrar.model_dict["policy_net"].max_Nnode = hyperparams["max_clique_size"]
     ScePT_model.set_environment(env)
@@ -500,7 +524,8 @@ def plot_snapshot(rank):
         nusc_path = args.nuscenes_path + "/v1.0-mini"
     else:
         nusc_path = None
-    scene = env.scenes[2]
+    scene_idx = np.random.choice(len(env.scenes),1)
+    scene = env.scenes[scene_idx[0]]
     with open("example.pkl", "wb") as file:
         dill.dump(scene, file)
 
@@ -528,28 +553,47 @@ def plot_snapshot(rank):
         con=default_con,
         time_steps=timesteps,
         nusc_path=nusc_path,
+        mode=args.mode,
+        args=args,
     )
-
-    (
-        clique_type,
-        clique_state_history,
-        clique_first_timestep,
-        clique_last_timestep,
-        clique_edges,
-        clique_future_state,
-        clique_map,
-        clique_node_size,
-        clique_is_robot,
-        clique_lane,
-        clique_lane_dev,
-        clique_fut_lane_dev,
-    ) = zip(*batch)
+    if args.mode == "base":
+        (
+            clique_type,
+            clique_state_history,
+            clique_first_timestep,
+            clique_last_timestep,
+            clique_edges,
+            clique_future_state,
+            clique_map,
+            clique_node_size,
+            clique_is_robot,
+            clique_lane,
+            clique_lane_dev,
+            clique_fut_lane_dev,
+        ) = zip(*batch)
+    elif args.mode == "poses-gt":
+        (
+            clique_type,
+            clique_state_history,
+            clique_first_timestep,
+            clique_last_timestep,
+            clique_edges,
+            clique_future_state,
+            clique_map,
+            clique_node_size,
+            clique_is_robot,
+            clique_lane,
+            clique_lane_dev,
+            clique_fut_lane_dev,
+            clique_pose_history,
+            clique_pose_future_state
+        ) = zip(*batch)
     clique_robot_traj = dict()
     for i in range(len(clique_type)):
         for j in range(len(clique_type[i])):
             if clique_is_robot[i][j]:
                 clique_robot_traj[(i, j)] = clique_future_state[i][j]
-
+    # TODO: Rework this to be able to parse poses
     (
         clique_state_pred,
         clique_input_pred,
@@ -585,6 +629,7 @@ def plot_snapshot(rank):
             limits=[100, 100],
             emphasized_nodes=[],
         )
+        plt.savefig("plots/" + args.mode + "_" + args.trained_model_dir + "_" + str(scene_idx[0]) + ".png")
         plt.show()
     else:
         visualization.animate_traj_pred_clique(

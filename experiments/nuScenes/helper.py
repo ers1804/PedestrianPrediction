@@ -7,12 +7,12 @@ import matplotlib.patheffects as pe
 from scipy.ndimage import rotate
 import seaborn as sns
 import sys
-#sys.path.append('/home/erik/ScePT/ScePT')
-sys.path.append('./ScePT')
+sys.path.append('/home/erik/ScePT/ScePT')
+#sys.path.append('./ScePT')
 
 from model.model_registrar import ModelRegistrar
 from model import ScePT
-from utils import prediction_output_to_trajectories
+#from utils import prediction_output_to_trajectories
 
 from scipy.integrate import cumtrapz
 

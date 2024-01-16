@@ -597,6 +597,16 @@ def train(rank, args):
                     leave=True,
                     disable=(rank > 0),
                 )
+                total_ADE = {nt: 0 for nt in eval_env.node_type_list}
+                total_FDE = {
+                    nt: np.zeros(hyperparams["prediction_horizon"]) for nt in eval_env.node_type_list
+                }
+                total_ADE_count = {nt: 0 for nt in eval_env.node_type_list}
+                total_FDE_count = {
+                    nt: np.zeros(hyperparams["prediction_horizon"]) for nt in eval_env.node_type_list
+                }
+                total_coll_score = {nt: 0 for nt in eval_env.node_type_list}
+                total_nt_count = {nt: 0 for nt in eval_env.node_type_list}
                 for batch in pbar:
                     (
                         eval_loss,
@@ -607,14 +617,19 @@ def train(rank, args):
                         _,
                         _,
                     ) = ScePT_module.eval_loss(batch)
+                    for nt in eval_env.node_type_list:
+                        total_ADE[nt] += ADE[nt]
+                        total_FDE[nt] += FDE[nt]
+                        total_ADE_count[nt] += ADE_count[nt]
+                        total_FDE_count[nt] += FDE_count[nt]
                     pbar.set_description(f"Epoch {epoch}, L: {eval_loss:.2f}")
 
             if rank == 0 and not args.debug:
                 log_writer.add_scalar(f"eval/loss", eval_loss, curr_iter)
-                log_writer.add_scalar(f"eval/ADE_ped", ADE['PEDESTRIAN'], curr_iter)
-                log_writer.add_scalar(f"eval/ADE_veh", ADE['VEHICLE'], curr_iter)
-                log_writer.add_scalar(f"eval/FDE_ped", np.mean(FDE['PEDESTRIAN']), curr_iter)
-                log_writer.add_scalar(f"eval/FDE_veh", np.mean(FDE['VEHICLE']), curr_iter)
+                log_writer.add_scalar(f"eval/ADE_ped", total_ADE['PEDESTRIAN']/total_ADE_count['PEDESTRIAN'], curr_iter)
+                log_writer.add_scalar(f"eval/ADE_veh", total_ADE['VEHICLE']/total_ADE_count['VEHICLE'], curr_iter)
+                log_writer.add_scalar(f"eval/FDE_ped", np.mean(total_FDE['PEDESTRIAN']/total_FDE_count['PEDESTRIAN']), curr_iter)
+                log_writer.add_scalar(f"eval/FDE_veh", np.mean(total_FDE['VEHICLE']/total_FDE_count['VEHICLE']), curr_iter)
 
         if rank == 0 and (
             args.save_every is not None

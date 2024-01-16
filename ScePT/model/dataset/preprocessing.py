@@ -426,13 +426,15 @@ def obtain_clique_from_scene(
     mode="base",
     args=None,
 ):
-    pose_estimator = PoseEstimator(args.model_id, args)
-    print("Pose estimator loaded")
+    if mode != "base":
+        pose_estimator = PoseEstimator(args.model_id, args)
+        print("Pose estimator loaded")
     num_nodes = len(scene.nodes)
     T = scene.timesteps
     presence_table = np.zeros([num_nodes, T], dtype=bool)
     state = hyperparams["state"]
-    pose_state = hyperparams["poses"]
+    if mode != "base":
+        pose_state = hyperparams["poses"]
     if dynamics is not None and con is not None:
         use_deflt_traj = True
         safety_horizon = hyperparams["safety_horizon"]

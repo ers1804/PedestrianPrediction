@@ -256,13 +256,13 @@ def plot_trajectories_clique(
                         for k in range(len(clique_state_pred[n][i])):
                             traj = map.to_map_points(clique_state_pred[n][i][k][:, 0:2])
                             traj = np.vstack((map_coords[i], traj))
-                            # ax.plot(
-                            #     traj[:, 0],
-                            #     traj[:, 1],
-                            #     color=cmap[clique_type[n][i].value],
-                            #     linewidth=line_width,
-                            #     alpha=line_alpha,
-                            # )
+                            ax.plot(
+                                traj[:, 0],
+                                traj[:, 1],
+                                color=cmap[clique_type[n][i].value],
+                                linewidth=line_width,
+                                alpha=line_alpha,
+                            )
 
                         # traj = map.to_map_points(clique_future_state[n][i][:clique_last_timestep[n][i],0:2])
                         # traj = np.vstack((map_coords[i],traj))

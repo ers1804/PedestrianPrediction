@@ -154,3 +154,7 @@ ScePT/poses/runs/
 experiments/processed_pose_gt1/
 processed_poses_gt_nuScenes_train.pkl
 processed_poses_gt_nuScenes_val.pkl
+plots/
+2024-01-16_Example.png
+processed_nuScenes_train_trial.pkl
+processed_nuScenes_val_trial.pkl

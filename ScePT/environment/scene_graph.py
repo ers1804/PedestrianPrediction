@@ -163,7 +163,7 @@ class TemporalSceneGraph(object):
             # This is accepted as nan <= x evaluates to False
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                adj_matrix = (dists <= node_attention_mat).astype(int) * node_type_mat #np.int8
+                adj_matrix = (dists <= node_attention_mat).astype(np.int8) * node_type_mat #np.int8
 
             # Remove self-loops.
             np.fill_diagonal(adj_matrix, 0)
