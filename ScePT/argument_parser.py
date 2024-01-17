@@ -303,4 +303,9 @@ parser.add_argument("--pose_path",
                     type=str,
                     default="./ScePT/poses/runs",
                     help="Path to pose runs")
+parser.add_argument("--pose_hidden_dim",
+                    type=int,
+                    nargs='+',
+                    default=None,
+                    help="Hidden dimension for pose model")
 args = parser.parse_args()

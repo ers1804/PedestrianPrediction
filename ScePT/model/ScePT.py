@@ -189,7 +189,9 @@ class ScePT(nn.Module):
             clique_lane_dev=clique_lane_dev,
             clique_fut_lane_dev=clique_fut_lane_dev,
             clique_pose_history=clique_pose_history,
-            clique_pose_future_state=clique_pose_future_state
+            clique_pose_future_state=clique_pose_future_state,
+            num_samples=num_samples,
+            criterion=criterion,
             )
         else:
             (
@@ -383,6 +385,8 @@ class ScePT(nn.Module):
         ft,
         num_samples=1,
         clique_robot_traj=None,
+        clique_pose_history=None,
+        clique_pose_future_state=None,
     ):
 
         bs = len(clique_type)
@@ -434,6 +438,8 @@ class ScePT(nn.Module):
                 clique_robot_traj,
                 ft,
                 num_samples,
+                clique_pose_history=clique_pose_history,
+                clique_pose_future_state=clique_pose_future_state,
             )
         else:
             (
@@ -455,6 +461,8 @@ class ScePT(nn.Module):
                 ft,
                 num_samples,
                 incl_robot_future=True,
+                clique_pose_history=clique_pose_history,
+                clique_pose_future_state=clique_pose_future_state,
             )
 
         return clique_state_pred, clique_input_pred, clique_ref_traj, clique_pi_list

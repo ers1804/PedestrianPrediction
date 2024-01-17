@@ -49,7 +49,7 @@ data_columns_pedestrian = pd.MultiIndex.from_product(
     [["position", "velocity", "acceleration"], ["x", "y"]]
 )
 
-add_data_columns_pedestrian = pd.MultiIndex.from_tuples([('img',''), ('pc','')])
+add_data_columns_pedestrian = pd.MultiIndex.from_tuples([('img',''), ('pc',''), ('angle', '')])
 
 curv_0_2 = 0
 curv_0_1 = 0
@@ -121,26 +121,54 @@ def augment_scene(scene, angle, mode='base'):
 
     alpha = angle * np.pi / 180
 
+    # TODO: Change this: We should normally agument the scene and then save the same img and pc data for all angles
+    # Can we decompose the corresponding angle from the position in the augmented scene list?
+
     for node in scene.nodes:
         if node.type == "PEDESTRIAN":
-            x = node.data.position.x.copy()
-            y = node.data.position.y.copy()
+            if mode == 'base':
+                x = node.data.position.x.copy()
+                y = node.data.position.y.copy()
 
-            x, y = rotate_pc(np.array([x, y]), alpha)
+                x, y = rotate_pc(np.array([x, y]), alpha)
 
-            vx = derivative_of(x, scene.dt)
-            vy = derivative_of(y, scene.dt)
-            ax = derivative_of(vx, scene.dt)
-            ay = derivative_of(vy, scene.dt)
+                vx = derivative_of(x, scene.dt)
+                vy = derivative_of(y, scene.dt)
+                ax = derivative_of(vx, scene.dt)
+                ay = derivative_of(vy, scene.dt)
 
-            data_dict = {
-                ("position", "x"): x,
-                ("position", "y"): y,
-                ("velocity", "x"): vx,
-                ("velocity", "y"): vy,
-                ("acceleration", "x"): ax,
-                ("acceleration", "y"): ay,
-            }
+                data_dict = {
+                    ("position", "x"): x,
+                    ("position", "y"): y,
+                    ("velocity", "x"): vx,
+                    ("velocity", "y"): vy,
+                    ("acceleration", "x"): ax,
+                    ("acceleration", "y"): ay,
+                }
+            elif mode == 'poses-gt':
+                x = node.data.position.x.copy()
+                y = node.data.position.y.copy()
+                img = getattr(node.data.img, "").copy()
+                pc = getattr(node.data.pc, "").copy()
+
+                x, y = rotate_pc(np.array([x, y]), alpha)
+
+                vx = derivative_of(x, scene.dt)
+                vy = derivative_of(y, scene.dt)
+                ax = derivative_of(vx, scene.dt)
+                ay = derivative_of(vy, scene.dt)
+
+                data_dict = {
+                    ("position", "x"): x,
+                    ("position", "y"): y,
+                    ("velocity", "x"): vx,
+                    ("velocity", "y"): vy,
+                    ("acceleration", "x"): ax,
+                    ("acceleration", "y"): ay,
+                    ("img", ""): img,
+                    ("pc", ""): pc,
+                    ("angle", ""): alpha,
+                }
 
             if mode == 'base':
                 node_data = pd.DataFrame(data_dict, columns=data_columns_pedestrian)
@@ -433,6 +461,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                         "heading": Quaternion(annotation["rotation"]).yaw_pitch_roll[0],
                         "img": img_path, # Numpy array of shape (H, W, 3) or None
                         "pc": pc_path, # Numpy array of shape (3, N) or None
+                        "angle": 0,
                     }
                 )
             elif mode == "poses-det":
@@ -748,6 +777,7 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
                     ("acceleration", "y"): ay,
                     ("img", ""): node_df['img'].values,
                     ("pc", ""): node_df['pc'].values,
+                    ("angle", ""): node_df['angle'].values,
                 }
                 pose_columns = data_columns_pedestrian.append(add_data_columns_pedestrian)
                 node_data = pd.DataFrame(data_dict, columns=pose_columns)

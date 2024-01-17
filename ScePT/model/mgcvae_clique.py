@@ -169,7 +169,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             self.add_submodule(
                 'PEDESTRIAN' + "/node_pre_encoder_poses",
                 model_if_absent=model(
-                    enc_dim, self.device, use_lane_info=self.hyperparams["use_lane_info"]
+                    enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
                 ),
             )
         for node_type in self.node_types:

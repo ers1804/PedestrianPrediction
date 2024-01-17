@@ -415,10 +415,10 @@ def eval_statistics(rank):
         eval_cliques = scene_cliques[0]
         for i in range(1, len(scene_cliques)):
             eval_cliques = eval_cliques + scene_cliques[i]
-    eval_data = clique_dataset(eval_cliques)
+    eval_data = clique_dataset(eval_cliques, mode=args.mode)
     eval_data_loader = DataLoader(
         eval_data,
-        collate_fn=clique_collate,
+        collate_fn=clique_collate if args.mode == "base" else (clique_collate_pose if args.mode == "poses-gt" else clique_collate_det),
         batch_size=hyperparams["batch_size"],
         shuffle=True,
         num_workers=args.num_workers,
@@ -456,7 +456,7 @@ def eval_statistics(rank):
                     FDE_count,
                     coll_score,
                     nt_count,
-                ) = ScePT_model.eval_loss(batch, num_samples, criterion=1)
+                ) = ScePT_model.eval_loss(batch, num_samples, criterion=0)
                 for nt in env.node_type_list:
                     total_ADE[nt] += ADE[nt]
                     total_FDE[nt] += FDE[nt]
@@ -593,7 +593,6 @@ def plot_snapshot(rank):
         for j in range(len(clique_type[i])):
             if clique_is_robot[i][j]:
                 clique_robot_traj[(i, j)] = clique_future_state[i][j]
-    # TODO: Rework this to be able to parse poses
     (
         clique_state_pred,
         clique_input_pred,
@@ -612,9 +611,11 @@ def plot_snapshot(rank):
         ft,
         num_samples=5,
         clique_robot_traj=clique_robot_traj,
+        clique_pose_history=clique_pose_history if args.mode == "poses-gt" else None,
+        clique_pose_future_state=clique_pose_future_state if args.mode == "poses-gt" else None,
     )
 
-    anim = False
+    anim = True
     if anim == False:
         fig, ax = visualization.plot_trajectories_clique(
             clique_type,
