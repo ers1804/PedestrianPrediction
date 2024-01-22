@@ -100,6 +100,8 @@ def plot_trajectories_clique(
     circle_edge_width=0.5,
     node_circle_size=0.3,
     show_clique=False,
+    print_distribution=False,
+    big_sample=None,
 ):
 
     cmap = ["k", "b", "m", "g"]
@@ -167,6 +169,26 @@ def plot_trajectories_clique(
                             linewidth=line_width,
                             alpha=line_alpha,
                         )
+                    # TODO: Check, how num_samples affects the output prediction vector dimensions, then adapt this function
+                    """
+                    Big sample is the same as clique_state_pred just with 500 predictions to be able to plot the distribution
+                    k is the sample number in the above loop
+                    """
+                    # First map the predictions to map coordinates
+                    if print_distribution:
+                        for t in range(len(big_sample[n][i][0])):
+                            traj = map.to_map_points(big_sample[n][i][:, t, 0:2])
+                            sns.kdeplot(
+                                traj[:, :, 0],
+                                traj[:, :, 1],
+                                ax=ax,
+                                shade=True,
+                                shade_lowest=False,
+                                color=np.random.choice(cmap),
+                                zorder=600,
+                                alpha=0.8,
+                            )
+
 
                 elif clique_type[n][i] == "VEHICLE":
                     zorder = 1
@@ -263,6 +285,25 @@ def plot_trajectories_clique(
                                 linewidth=line_width,
                                 alpha=line_alpha,
                             )
+                        # TODO: Check, how num_samples affects the output prediction vector dimensions, then adapt this function
+                        """
+                        Big sample is the same as clique_state_pred just with 500 predictions to be able to plot the distribution
+                        k is the sample number in the above loop
+                        """
+                        # First map the predictions to map coordinates
+                        if print_distribution:
+                            for t in range(len(big_sample[n][i][0])):
+                                traj = map.to_map_points(big_sample[n][i][:, t, 0:2])
+                                sns.kdeplot(
+                                    traj[:, :, 0],
+                                    traj[:, :, 1],
+                                    ax=ax,
+                                    shade=True,
+                                    shade_lowest=False,
+                                    color=np.random.choice(cmap),
+                                    zorder=600,
+                                    alpha=0.8,
+                                )
 
                         # traj = map.to_map_points(clique_future_state[n][i][:clique_last_timestep[n][i],0:2])
                         # traj = np.vstack((map_coords[i],traj))

@@ -160,3 +160,4 @@ processed_nuScenes_train_trial.pkl
 processed_nuScenes_val_trial.pkl
 anim.mp4
 example.pkl
+experiments/processed_pose_gt1_augment/nuScenes_train.pkl

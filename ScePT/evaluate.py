@@ -609,13 +609,37 @@ def plot_snapshot(rank):
         clique_lane,
         clique_lane_dev,
         ft,
-        num_samples=5,
+        num_samples=5 if not args.print_distribution else 500,
         clique_robot_traj=clique_robot_traj,
         clique_pose_history=clique_pose_history if args.mode == "poses-gt" else None,
         clique_pose_future_state=clique_pose_future_state if args.mode == "poses-gt" else None,
     )
+    big_sample = None
+    if args.print_distribution:
+        (
+            big_sample,
+            clique_input_pred,
+            clique_ref_traj,
+            clique_pi_list,
+        ) = ScePT_model.predict(
+            clique_type,
+            clique_state_history,
+            clique_first_timestep,
+            clique_edges,
+            clique_map,
+            clique_node_size,
+            clique_is_robot,
+            clique_lane,
+            clique_lane_dev,
+            ft,
+            num_samples=500,
+            clique_robot_traj=clique_robot_traj,
+            clique_pose_history=clique_pose_history if args.mode == "poses-gt" else None,
+            clique_pose_future_state=clique_pose_future_state if args.mode == "poses-gt" else None,
+        )
 
-    anim = True
+
+    anim = args.animate
     if anim == False:
         fig, ax = visualization.plot_trajectories_clique(
             clique_type,
@@ -629,6 +653,8 @@ def plot_snapshot(rank):
             clique_is_robot,
             limits=[100, 100],
             emphasized_nodes=[],
+            print_distribution=args.print_distribution,
+            big_sample=big_sample,
         )
         plt.savefig("plots/" + args.mode + "_" + args.trained_model_dir + "_" + str(scene_idx[0]) + ".png")
         plt.show()

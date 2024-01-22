@@ -971,6 +971,48 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                     clique_first_timestep[i][j], clique_first_timestep[i][k]
                 )
         if self.use_poses:
+            # Normalize Keypoints
+            """
+            def normalize_keypoints2D_batch(keypoint_batch, epsilon=1e-6):
+                max_values = torch.max(keypoint_batch, dim=1).values
+                min_values = torch.min(keypoint_batch, dim=1).values
+
+                height = max_values[:, 1] - min_values[:, 1]
+                width = max_values[:, 0] - min_values[:, 0]
+
+                keypoint_batch_zz = keypoint_batch.transpose(0, 1) - min_values
+
+                keypoint_batch_trans = keypoint_batch_zz.transpose(1, 2)
+
+                # norm height [-1,1]
+                norm_kp = (keypoint_batch_trans/(height+epsilon))*2
+                norm_kp[:, 0, :] = norm_kp[:, 0, :] - width/(height+epsilon)
+                norm_kp[:, 1, :] = norm_kp[:, 1, :] - 1
+
+                return norm_kp.permute(2, 0, 1)
+
+            """
+            # Shape keypoints is [batch_size, 13, 3]
+            # TODO: Recheck the dimensions of batch_state_history_pose
+            if self.args.norm_keypoints == "batch":
+                reshaped_points = batch_state_history_pose.view(-1, 3)
+
+                # Calculate min and max for each coordinate
+                min_vals = torch.min(reshaped_points, dim=0)[0]
+                max_vals = torch.max(reshaped_points, dim=0)[0]
+
+                # Normalize the points to range [0, 1]
+                normalized_points = (batch_state_history_pose - min_vals) / (max_vals - min_vals)
+
+                # Scale to range [-1, 1]
+                normalized_points = 2 * normalized_points - 1
+                batch_state_history_pose = normalized_points
+            elif self.args.norm_keypoints == "position":
+                """
+                First move the keypoints to the origin by subtracting the first 2D position in the sequence from the keypoints.
+                Then normalize the keypoints to a range of -1, 1.
+                """
+                pass
             return (
                 batch_state_history,
                 batch_state_history_st,

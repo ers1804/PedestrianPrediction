@@ -24,6 +24,15 @@ import cv2 as cv
 container_abcs = collections.abc
 
 
+def rotate_keypoints(points, alpha):
+    cos_a, sin_a = np.cos(alpha), np.sin(alpha)
+    rotation_matrix = np.array([[cos_a, -sin_a, 0],
+                                [sin_a, cos_a, 0],
+                                [0, 0, 1]])
+    
+    rotated_points = np.einsum('ijk,kl->ijl', points, rotation_matrix)
+    return rotated_points
+
 
 def smooth_angle_kinks(theta0):
     theta = np.array(theta0)
@@ -949,6 +958,7 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
+                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1037,6 +1047,7 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
+                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1127,6 +1138,7 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
+                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1225,6 +1237,7 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
+                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 

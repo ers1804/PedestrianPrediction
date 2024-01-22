@@ -127,8 +127,8 @@ def augment_scene(scene, angle, mode='base'):
     for node in scene.nodes:
         if node.type == "PEDESTRIAN":
             if mode == 'base':
-                x = node.data.position.x.copy()
-                y = node.data.position.y.copy()
+                x = node.data.position.x.copy().astype(np.float32)
+                y = node.data.position.y.copy().astype(np.float32)
 
                 x, y = rotate_pc(np.array([x, y]), alpha)
 
@@ -146,8 +146,8 @@ def augment_scene(scene, angle, mode='base'):
                     ("acceleration", "y"): ay,
                 }
             elif mode == 'poses-gt':
-                x = node.data.position.x.copy()
-                y = node.data.position.y.copy()
+                x = node.data.position.x.copy().astype(np.float32)
+                y = node.data.position.y.copy().astype(np.float32)
                 img = getattr(node.data.img, "").copy()
                 pc = getattr(node.data.pc, "").copy()
 
@@ -808,18 +808,18 @@ def process_scene(token_samples, env, data_path, data_class, mode="base", nusc=N
         scene.nodes.append(node)
         # Turned this off as it was causing problems with the data
         # Since the is returned as strange dtype=object arrays
-        # if data_class == "train":
-        #     scene.augmented = list()
-        #     angles = np.arange(0, 360, 15)
-        #     for angle in angles:
-        #         scene.augmented.append(augment_scene(scene, angle))
+        if data_class == "train":
+            scene.augmented = list()
+            angles = np.arange(0, 360, 15)
+            for angle in angles:
+                scene.augmented.append(augment_scene(scene, angle, mode=mode))
     return scene
 
 
 def process_data(data_path, version, output_path, num_workers, mode="base"):
     nusc = NuScenes(version=version, dataroot=data_path, verbose=True)
     helper = PredictHelper(nusc)
-    for data_class in ["train"]: # was: ["train_val", "val", "train"]
+    for data_class in ["train_val", "val"]: # was: ["train_val", "val", "train"]
         # for data_class in ['mini_train', 'mini_val']: # ['mini_train', 'mini_val']:
         env = Environment(
             node_type_list=["VEHICLE", "PEDESTRIAN"],

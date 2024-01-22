@@ -308,4 +308,16 @@ parser.add_argument("--pose_hidden_dim",
                     nargs='+',
                     default=None,
                     help="Hidden dimension for pose model")
+parser.add_argument("--norm_keypoints",
+                    type=str,
+                    default=None,
+                    help="Normalize keypoints for pose model. Possible values are batch and position.")
+parser.add_argument("--print_distribution",
+                    type=bool,
+                    default=False,
+                    help="Print distribution of every timestep of trajectory of agent.")
+parser.add_argument("--animate",
+                    type=bool,
+                    default=False,
+                    help="Animate the scene in evaluate.py.")
 args = parser.parse_args()
