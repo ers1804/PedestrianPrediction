@@ -30,7 +30,7 @@ def rotate_keypoints(points, alpha):
                                 [sin_a, cos_a, 0],
                                 [0, 0, 1]])
     
-    rotated_points = np.einsum('ijk,kl->ijl', points, rotation_matrix)
+    rotated_points = np.dot(points, rotation_matrix.T)
     return rotated_points
 
 
@@ -1237,6 +1237,7 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
+                                        #print(poses[i].shape)
                                         poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
