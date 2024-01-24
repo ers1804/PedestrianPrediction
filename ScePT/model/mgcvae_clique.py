@@ -164,14 +164,24 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         ############################
         # Add encoder for poses
         if self.use_poses:
-            model = getattr(model_components, "PED_pre_encode_pose")
-            enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
-            self.add_submodule(
-                'PEDESTRIAN' + "/node_pre_encoder_poses",
-                model_if_absent=model(
-                    enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
-                ),
-            )
+            if self.args.implicit:
+                model = getattr(model_components, "PED_pre_encode_pose_implicit")
+                enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
+                self.add_submodule(
+                    'PEDESTRIAN' + "/node_pre_encoder_poses",
+                    model_if_absent=model(
+                        enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
+                    ),
+                )
+            else:
+                model = getattr(model_components, "PED_pre_encode_pose")
+                enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
+                self.add_submodule(
+                    'PEDESTRIAN' + "/node_pre_encoder_poses",
+                    model_if_absent=model(
+                        enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
+                    ),
+                )
         for node_type in self.node_types:
             # if node_type == "PEDESTRIAN" and self.args.mode == "poses-gt":
             #     """
@@ -850,7 +860,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         if self.use_poses:
                             batch_state_future_pose[nt][:, idx] = torch.tensor(
                                 #clique_pose_future_state[i][j].reshape(ft, -1)
-                                np.zeros((ft, 39))
+                                np.zeros((ft, 39 if not self.args.implicit else num_implicit_features))
                             ).to(self.device)
 
                         batch_state_future_st[nt][
@@ -994,7 +1004,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             """
             # Shape keypoints is [batch_size, 13, 3]
             # TODO: Recheck the dimensions of batch_state_history_pose
-            if self.args.norm_keypoints == "batch":
+            if self.args.norm_keypoints == "batch" and not self.args.implicit:
                 reshaped_points = batch_state_history_pose.view(-1, 3)
 
                 # Calculate min and max for each coordinate
@@ -1007,7 +1017,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 # Scale to range [-1, 1]
                 normalized_points = 2 * normalized_points - 1
                 batch_state_history_pose = normalized_points
-            elif self.args.norm_keypoints == "position":
+            elif self.args.norm_keypoints == "position" and not self.args.implicit:
                 """
                 First move the keypoints to the origin by subtracting the first 2D position in the sequence from the keypoints.
                 Then normalize the keypoints to a range of -1, 1.
@@ -1157,7 +1167,6 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 else:
                     # Only needed here as PEDESTRIAN is not part of map_encoder hyperparam
                     if node_type == "PEDESTRIAN":
-                        # TODO: Recheck if dimensions are correct!
                         #batch_s = batch_pose_history[node_type].shape[0]
                         pre_encoded_vec = self.node_modules[
                             node_type + "/node_pre_encoder_poses"

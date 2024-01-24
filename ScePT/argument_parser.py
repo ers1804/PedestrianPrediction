@@ -320,4 +320,8 @@ parser.add_argument("--animate",
                     type=bool,
                     default=False,
                     help="Animate the scene in evaluate.py.")
+parser.add_argument("--implicit",
+                    type=bool,
+                    default=False,
+                    help="Use implicit keypoint features of fusion model.")
 args = parser.parse_args()

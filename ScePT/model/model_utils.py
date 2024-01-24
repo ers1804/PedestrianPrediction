@@ -408,6 +408,19 @@ class PED_pre_encode_pose(nn.Module):
         return self.FC(x)
 
 
+class PED_pre_encode_pose_implicit(nn.Module):
+    def __init__(self, enc_dim, device, hidden_dim=None, use_lane_info=False):
+        super(PED_pre_encode_pose, self).__init__()
+        self.device = device
+        if hidden_dim is None:
+            self.FC = simplelinear(num_implicit_features, enc_dim, device=device)
+        else:
+            self.FC = simplelinear(num_implicit_features, enc_dim, hidden_dim, device=device)
+
+    def forward(self, x):
+        return self.FC(x)
+
+
 class VEH_pre_encode(nn.Module):
     def __init__(self, enc_dim, device, hidden_dim=None, use_lane_info=False):
         super(VEH_pre_encode, self).__init__()

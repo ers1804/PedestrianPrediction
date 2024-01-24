@@ -25,7 +25,7 @@ class PoseEstimator:
 
         sys.path.append(args.alpha_path)
         # Load Fusion Network
-        self.model = Lidar2dKeypointFusionmodel()
+        self.model = Lidar2dKeypointFusionmodel(implicit=self.args.implicit)
         logging.info(f"Loading model weights from {model_id}/ckpts/best_model")
         self.model.load_state_dict(torch.load(args.pose_path + "/" + model_id + "/ckpts/best_model"))
         self.model.to(self.args.device)

@@ -1,6 +1,7 @@
 import gin
 import torch
 import torch.nn as nn
+import copy
 
 from poses.Pose_Estimation_main.evaluation.metrics import Metrics
 from poses.Pose_Estimation_main.models.supervised.point_networks.pointnet import PointNet
@@ -9,13 +10,14 @@ from poses.Pose_Estimation_main.models.supervised.lifting_networks.simple_liftin
 
 @gin.configurable
 class Lidar2dKeypointFusionmodel(nn.Module):
-    def __init__(self, num_joints=13, channels=3):
+    def __init__(self, num_joints=13, channels=3, implicit=False):
         super(Lidar2dKeypointFusionmodel, self).__init__()
 
         self.num_joints = num_joints
         self.channels = channels
         self.loss_contributions = (1, 1)
         self.type = "fusion"
+        self.implicit = implicit
 
         # self.w1 = nn.Linear(self.num_joints*self.channels*2, hidden_size)
         self.w2 = nn.Linear(self.num_joints*self.channels*2, self.num_joints*self.channels)
@@ -49,9 +51,14 @@ class Lidar2dKeypointFusionmodel(nn.Module):
             self.loss_contributions = (point_mpjpe, lifting_mpjpe)
 
         x = torch.cat([point_net_preds, lifting_net_preds], axis=1).view(point_net_preds.shape[0], -1)
+        if self.implicit:
+            implicit_features = copy.deepcopy(x)
         # x = self.w1(x)
         # x = self.activ(x)
         # x = self.dropout(x)
         x = self.w2(x)
-
-        return x.reshape(x.shape[0], -1, self.channels), trans_features, self.loss_contributions
+        
+        if self.implicit:
+            return implicit_features, trans_features, self.loss_contributions
+        else:
+            return x.reshape(x.shape[0], -1, self.channels), trans_features, self.loss_contributions

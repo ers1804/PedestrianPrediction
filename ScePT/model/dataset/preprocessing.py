@@ -958,7 +958,8 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
-                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
+                                        if not args.implicit:
+                                            poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1047,7 +1048,8 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
-                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
+                                        if not args.implicit:
+                                            poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1138,7 +1140,8 @@ def obtain_clique_from_scene(
                                             pc = np.concatenate((pc, double_points), axis=2)
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
-                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
+                                        if not args.implicit:
+                                            poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 
@@ -1238,7 +1241,8 @@ def obtain_clique_from_scene(
                                         keypoints = pose_estimator.estimate_poses(img, pc)
                                         poses[i] = keypoints[0].cpu().numpy()
                                         #print(poses[i].shape)
-                                        poses[i] = rotate_keypoints(poses[i], node[i, 2])
+                                        if not args.implicit:
+                                            poses[i] = rotate_keypoints(poses[i], node[i, 2])
                                 new_clique_pose_history.append(poses)
                             clique_pose_history = new_clique_pose_history
 

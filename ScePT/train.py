@@ -90,8 +90,15 @@ def train(rank, args):
         nusc_path = None
 
     if args.mode == "poses-gt":
-        processed_train_file = "processed_poses_gt_augment" + args.train_data_dict
-        processed_eval_file = "processed_poses_gt_augment" + args.eval_data_dict
+        if args.augment:
+            processed_train_file = "processed_poses_gt_augment" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_augment" + args.eval_data_dict
+        elif args.implicit:
+            processed_train_file = "processed_poses_gt_implicit" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_implicit" + args.eval_data_dict
+        elif not args.augment:
+            processed_train_file = "processed_poses_gt_" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_" + args.eval_data_dict
     elif args.mode == "poses-pred":
         processed_train_file = "processed_poses_det_" + args.train_data_dict
         processed_eval_file = "processed_poses_det_" + args.eval_data_dict
