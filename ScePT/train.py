@@ -328,8 +328,6 @@ def train(rank, args):
     # model_registrar.load_models(iter_num=19)
     # model_registrar.model_dir = model_dir
 
-    # TODO: Case distinction for with and without pose estimation
-
     if args.mode == "base":
         ScePT_model = ScePT(model_registrar, hyperparams, log_writer, args.device)
     else:

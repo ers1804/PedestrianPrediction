@@ -701,13 +701,13 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         # Pose Batch
         if self.use_poses:
             batch_state_history_pose = {
-                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3]).to(
+                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3 if not self.args.implicit else 78]).to(
                     self.device
             )
             for nt in self.node_types
             }
             batch_state_history_pose_st = {
-                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3]).to(
+                nt: torch.zeros([ht + 1, len(node_index[nt]), 13*3 if not self.args.implicit else 78]).to(
                     self.device
             )
             for nt in self.node_types
@@ -739,13 +739,13 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             # Pose Future Batch
             if self.use_poses:
                 batch_state_future_pose = {
-                    nt: torch.zeros([ft, len(node_index[nt]), 13*3]).to(
+                    nt: torch.zeros([ft, len(node_index[nt]), 13*3 if not self.args.implicit else 78]).to(
                         self.device
                     )
                     for nt in self.node_types
                 }
                 batch_state_future_pose_st = {
-                    nt: torch.zeros([ft, len(node_index[nt]), 13*3]).to(
+                    nt: torch.zeros([ft, len(node_index[nt]), 13*3 if not self.args.implicit else 78]).to(
                         self.device
                     )
                     for nt in self.node_types
@@ -817,7 +817,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         if self.use_poses:
                             batch_state_future_pose[nt][:, idx] = torch.tensor(
                                 #clique_pose_future_state[i][j].reshape(ft, -1)
-                                np.zeros((ft, 39))
+                                np.zeros((ft, 39 if not self.args.implicit else 78))
                             ).to(self.device)
 
                         batch_state_future_st[nt][
@@ -860,7 +860,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                         if self.use_poses:
                             batch_state_future_pose[nt][:, idx] = torch.tensor(
                                 #clique_pose_future_state[i][j].reshape(ft, -1)
-                                np.zeros((ft, 39 if not self.args.implicit else num_implicit_features))
+                                np.zeros((ft, 39 if not self.args.implicit else 78))
                             ).to(self.device)
 
                         batch_state_future_st[nt][
@@ -1003,26 +1003,51 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
             """
             # Shape keypoints is [batch_size, 13, 3]
-            # TODO: Recheck the dimensions of batch_state_history_pose
             if self.args.norm_keypoints == "batch" and not self.args.implicit:
-                reshaped_points = batch_state_history_pose.view(-1, 3)
+                batch_state_history_pose_shape = batch_state_history_pose['PEDESTRIAN'].shape
+
+                # Save indices where there are no pose information (i.e., all zeros)
+                zero_slices = torch.all(batch_state_history_pose['PEDESTRIAN'] == 0, dim=2)
+                zero_indices = torch.nonzero(zero_slices)
+                reshaped_points = batch_state_history_pose['PEDESTRIAN'].view(-1, 3)
 
                 # Calculate min and max for each coordinate
                 min_vals = torch.min(reshaped_points, dim=0)[0]
                 max_vals = torch.max(reshaped_points, dim=0)[0]
 
                 # Normalize the points to range [0, 1]
-                normalized_points = (batch_state_history_pose - min_vals) / (max_vals - min_vals)
+                normalized_points = (reshaped_points - min_vals) / (max_vals - min_vals)
 
                 # Scale to range [-1, 1]
                 normalized_points = 2 * normalized_points - 1
-                batch_state_history_pose = normalized_points
+                batch_state_history_pose = normalized_points.view(batch_state_history_pose_shape)
+                batch_state_history_pose[zero_indices[:, 0], zero_indices[:, 1], :] = 0
             elif self.args.norm_keypoints == "position" and not self.args.implicit:
                 """
                 First move the keypoints to the origin by subtracting the first 2D position in the sequence from the keypoints.
-                Then normalize the keypoints to a range of -1, 1.
+                Then normalize the keypoints to a range of -1, 1. BUT: we don't know if the x and y coordinates of the 2D positions
+                and the x and y coordinates of the keypoints are the same, so proceed with caution.
                 """
-                pass
+                # Move keypoints then perform batch normalization
+                batch_state_history_pose_shape = batch_state_history_pose['PEDESTRIAN'].shape
+                moved_keypoints = batch_state_history_pose['PEDESTRIAN'][:, :, :2] - batch_state_history['PEDESTRIAN'][0, :, :2] 
+
+                # Save indices where there are no pose information (i.e., all zeros)
+                zero_slices = torch.all(moved_keypoints == 0, dim=2)
+                zero_indices = torch.nonzero(zero_slices)
+                reshaped_points = moved_keypoints.view(-1, 3)
+
+                # Calculate min and max for each coordinate
+                min_vals = torch.min(reshaped_points, dim=0)[0]
+                max_vals = torch.max(reshaped_points, dim=0)[0]
+
+                # Normalize the points to range [0, 1]
+                normalized_points = (reshaped_points - min_vals) / (max_vals - min_vals)
+
+                # Scale to range [-1, 1]
+                normalized_points = 2 * normalized_points - 1
+                batch_state_history_pose = normalized_points.view(batch_state_history_pose_shape)
+                batch_state_history_pose[zero_indices[:, 0], zero_indices[:, 1], :] = 0
             return (
                 batch_state_history,
                 batch_state_history_st,

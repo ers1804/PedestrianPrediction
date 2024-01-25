@@ -939,7 +939,10 @@ def obtain_clique_from_scene(
                             new_clique_pose_history = []
                             for node in clique_pose_history:
                                 num_steps = node.shape[0]
-                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                if not args.implicit:
+                                    poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                else:
+                                    poses = np.zeros((num_steps, 1, 78))
                                 for i in range(num_steps):
                                     if type(node[i, 0]) is str and type(node[i, 1]) is str:
                                         img = [np.load(node[i, 0])]
@@ -1029,7 +1032,10 @@ def obtain_clique_from_scene(
                             new_clique_pose_history = []
                             for node in clique_pose_history:
                                 num_steps = node.shape[0]
-                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                if not args.implicit:
+                                    poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                else:
+                                    poses = np.zeros((num_steps, 1, 78))
                                 for i in range(num_steps):
                                     if type(node[i, 0]) is str and type(node[i, 1]) is str:
                                         img = [np.load(node[i, 0])]
@@ -1121,7 +1127,10 @@ def obtain_clique_from_scene(
                             new_clique_pose_history = []
                             for node in clique_pose_history:
                                 num_steps = node.shape[0]
-                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                if not args.implicit:
+                                    poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                else:
+                                    poses = np.zeros((num_steps, 1, 78))
                                 for i in range(num_steps):
                                     if type(node[i, 0]) is str and type(node[i, 1]) is str:
                                         img = [np.load(node[i, 0])]
@@ -1211,7 +1220,10 @@ def obtain_clique_from_scene(
                             new_clique_pose_history = []
                             for node in clique_pose_history:
                                 num_steps = node.shape[0]
-                                poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                if not args.implicit:
+                                    poses = np.zeros((num_steps, pose_estimator.model.num_joints, 3))
+                                else:
+                                    poses = np.zeros((num_steps, 1, 78))
                                 for i in range(num_steps):
                                     if type(node[i, 0]) is str and type(node[i, 1]) is str:
                                         if type(node[i, 0]) is str:

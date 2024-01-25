@@ -313,15 +313,13 @@ parser.add_argument("--norm_keypoints",
                     default=None,
                     help="Normalize keypoints for pose model. Possible values are batch and position.")
 parser.add_argument("--print_distribution",
-                    type=bool,
-                    default=False,
+                    action='store_true',
                     help="Print distribution of every timestep of trajectory of agent.")
 parser.add_argument("--animate",
                     type=bool,
                     default=False,
                     help="Animate the scene in evaluate.py.")
 parser.add_argument("--implicit",
-                    type=bool,
-                    default=False,
+                    action='store_true',
                     help="Use implicit keypoint features of fusion model.")
 args = parser.parse_args()

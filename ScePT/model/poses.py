@@ -135,7 +135,10 @@ class PoseEstimator:
         # Right now: fill with zeros and use indices_wo_detection
         for i in indices_wo_detection:
             keypoints_2D[i] = torch.zeros((parsed_keypoints.shape[0], self.model.num_joints, 2), dtype=torch.float32)
-            return torch.zeros((1, 13, 3), dtype=torch.float32).to(self.args.device)
+            if self.args.implicit:
+                return torch.zeros((1, 1, 78), dtype=torch.float32).to(self.args.device)
+            else:
+                return torch.zeros((1, 13, 3), dtype=torch.float32).to(self.args.device)
         keypoints_2D = keypoints_2D.to(self.args.device)
 
         # Turn numpy point clouds into tensor
