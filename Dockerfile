@@ -55,6 +55,10 @@ COPY requirements.txt .
 #####
 COPY processed_poses_gt_nuScenes_train.pkl .
 COPY processed_poses_gt_nuScenes_val.pkl .
+COPY processed_poses_gt_augmentnuScenes_train.pkl .
+COPY processed_poses_gt_augmentnuScenes_val.pkl .
+COPY processed_poses_gt_implicitnuScenes_train.pkl .
+COPY processed_poses_gt_implicitnuScenes_val.pkl .
 COPY AlphaPose ./alphapose
 
 

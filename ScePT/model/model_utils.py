@@ -400,9 +400,9 @@ class PED_pre_encode_pose(nn.Module):
         super(PED_pre_encode_pose, self).__init__()
         self.device = device
         if hidden_dim is None:
-            self.FC = simplelinear(4+(3*13), enc_dim, device=device)
+            self.FC = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
         else:
-            self.FC = simplelinear(4+(3*13), enc_dim, hidden_dim, device=device)
+            self.FC = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
 
     def forward(self, x):
         return self.FC(x)
@@ -410,12 +410,12 @@ class PED_pre_encode_pose(nn.Module):
 
 class PED_pre_encode_pose_implicit(nn.Module):
     def __init__(self, enc_dim, device, hidden_dim=None, use_lane_info=False):
-        super(PED_pre_encode_pose, self).__init__()
+        super(PED_pre_encode_pose_implicit, self).__init__()
         self.device = device
         if hidden_dim is None:
-            self.FC = simplelinear(78, enc_dim, device=device)
+            self.FC = simplelinear(input_dim=4+78, output_dim=enc_dim, device=device)
         else:
-            self.FC = simplelinear(78, enc_dim, hidden_dim, device=device)
+            self.FC = simplelinear(input_dim=4+78, output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
 
     def forward(self, x):
         return self.FC(x)

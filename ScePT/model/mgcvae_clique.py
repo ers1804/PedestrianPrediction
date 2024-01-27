@@ -1020,8 +1020,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                 # Scale to range [-1, 1]
                 normalized_points = 2 * normalized_points - 1
-                batch_state_history_pose = normalized_points.view(batch_state_history_pose_shape)
-                batch_state_history_pose[zero_indices[:, 0], zero_indices[:, 1], :] = 0
+                batch_state_history_pose['PEDESTRIAN'] = normalized_points.view(batch_state_history_pose_shape)
+                batch_state_history_pose['PEDESTRIAN'][zero_indices[:, 0], zero_indices[:, 1], :] = 0
             elif self.args.norm_keypoints == "position" and not self.args.implicit:
                 """
                 First move the keypoints to the origin by subtracting the first 2D position in the sequence from the keypoints.
@@ -1046,8 +1046,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
 
                 # Scale to range [-1, 1]
                 normalized_points = 2 * normalized_points - 1
-                batch_state_history_pose = normalized_points.view(batch_state_history_pose_shape)
-                batch_state_history_pose[zero_indices[:, 0], zero_indices[:, 1], :] = 0
+                batch_state_history_pose['PEDESTRIAN'] = normalized_points.view(batch_state_history_pose_shape)
+                batch_state_history_pose['PEDESTRIAN'][zero_indices[:, 0], zero_indices[:, 1], :] = 0
             return (
                 batch_state_history,
                 batch_state_history_st,

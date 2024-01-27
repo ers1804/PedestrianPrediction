@@ -1,21 +1,21 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: scept-poses-gt-training
+  name: scept-poses-gt-training-w-augment-hidden-64-64
   namespace: default
 spec:
   template:
     metadata:
       labels:
-        app: scept-poses-gt-training
+        app: scept-poses-gt-training-w-augment-hidden-64-64
     spec:
       containers:
-      - name: scept-poses-gt-training-container
-        image: 10.27.65.194:31500/scept_poses:v10 # Placeholder for the custom image from your registry
+      - name: scept-poses-gt-training-w-augment-hidden-64-64-container
+        image: 10.27.65.194:31500/scept_poses:v12 # Placeholder for the custom image from your registry
         env:
         - name: UNIQUE_JOB_DIR
           value: /workspace/ScePT-plus-plus/training/scept-poses-gt-training
-        command: ["torchrun", "--nproc_per_node=1", "ScePT/train.py", "--train_data_dict", "nuScenes_train.pkl", "--eval_data_dict", "nuScenes_val.pkl", "--offline_scene_graph", "yes", "--preprocess_workers=6", "--log_dir", "$(UNIQUE_JOB_DIR)", "--train_epochs=150", "--conf", "./config/clique_nusc_pose_gt1_config.json", "--indexing_workers=8", "--batch_size=1024", "--vis_every=1", "--map_encoding", "--incl_robot_node", "--eval_every=1", "--use_processed_data", "--data_dir", "./experiments/processed_pose_gt1", "--eval_batch_size=1024", "--log_tag", "poses-gt-w-augment-hidden-64-64_", "--model_id", "run_2023-11-29T07-48-39-851756", "--sample_to=128", "--alpha_path", "./alphapose", "--mode", "poses-gt", "--num_workers", "4", "--nuscenes_path", "/workspace/ScePT-plus-plus/publicdatasets/nuscenes", "--pose_path", "./ScePT/poses/runs", "--alpha_cfg", "./alphapose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "--alpha_checkpoint", "./alphapose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "--augment", "--pose_hidden_dim", "64", "64"] # Adjust if the image uses a different starting command.
+        command: ["torchrun", "--nproc_per_node=1", "ScePT/train.py", "--train_data_dict", "nuScenes_train.pkl", "--eval_data_dict", "nuScenes_val.pkl", "--offline_scene_graph", "yes", "--preprocess_workers=6", "--log_dir", "$(UNIQUE_JOB_DIR)", "--train_epochs=150", "--conf", "./config/clique_nusc_pose_gt1_config_aug.json", "--indexing_workers=8", "--batch_size=1024", "--vis_every=1", "--map_encoding", "--incl_robot_node", "--eval_every=1", "--use_processed_data", "--data_dir", "./experiments/processed_pose_gt1_augment", "--eval_batch_size=1024", "--log_tag", "poses-gt-w-augment-hidden-64-64_", "--model_id", "run_2023-11-29T07-48-39-851756", "--sample_to=128", "--alpha_path", "./alphapose", "--mode", "poses-gt", "--num_workers", "8", "--nuscenes_path", "/workspace/ScePT-plus-plus/publicdatasets/nuscenes", "--pose_path", "./ScePT/poses/runs", "--alpha_cfg", "./alphapose/configs/halpe_68_noface/resnet/256x192_res50_lr1e-3_2x-dcn-combined.yaml", "--alpha_checkpoint", "./alphapose/pretrained_models/noface_fast50_dcn_combined_256x192.pth", "--augment", "--pose_hidden_dim", "64", "64"] # Adjust if the image uses a different starting command.
         resources:
           limits:
             #memory: "128Gi"
