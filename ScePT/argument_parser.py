@@ -322,4 +322,7 @@ parser.add_argument("--animate",
 parser.add_argument("--implicit",
                     action='store_true',
                     help="Use implicit keypoint features of fusion model.")
+parser.add_argument("--attention",
+                    action='store_true',
+                    help="Use attention in fusion model.")
 args = parser.parse_args()

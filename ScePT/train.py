@@ -314,7 +314,7 @@ def train(rank, args):
         persistent_workers=False,
         collate_fn=clique_collate if args.mode == "base" else (clique_collate_pose if args.mode == "poses-gt" else clique_collate_det),
         batch_size=hyperparams["batch_size"],
-        shuffle=True,
+        shuffle=False,
         num_workers=args.num_workers,
     )
     eval_sampler = data.distributed.DistributedSampler(
@@ -329,7 +329,7 @@ def train(rank, args):
     # model_registrar.model_dir = model_dir
 
     if args.mode == "base":
-        ScePT_model = ScePT(model_registrar, hyperparams, log_writer, args.device)
+        ScePT_model = ScePT(model_registrar, hyperparams, log_writer, args.device, args=args)
     else:
         ScePT_model = ScePT(model_registrar, hyperparams, log_writer, args.device, args, True)
     ScePT_model.set_environment(train_env)

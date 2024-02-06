@@ -315,7 +315,7 @@ class WaymoOpenDataset(Dataset):
 
         return keypoints_3D.astype('float32'), occlusions_3D, root
 
-    def get_sampled_pc(self, data, root, mask_2D, anchor_indices=np.empty(0), sample_to=512):
+    def get_sampled_pc(self, data, root, mask_2D, anchor_indices=np.empty(0), sample_to=128):
 
         # A Sensor frame is defined for each sensor. It is denoted
         # as a 4x4 transformation matrix that maps data from sensor

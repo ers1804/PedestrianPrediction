@@ -350,10 +350,20 @@ def eval_statistics(rank):
         nusc_path = None
     
     if args.mode == "poses-gt":
-        processed_eval_file = "processed_poses_gt_" + args.eval_data_dict
+        if args.augment:
+            processed_train_file = "processed_poses_gt_augment" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_augment" + args.eval_data_dict
+        elif args.implicit:
+            processed_train_file = "processed_poses_gt_implicit" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_implicit" + args.eval_data_dict
+        elif not args.augment:
+            processed_train_file = "processed_poses_gt_" + args.train_data_dict
+            processed_eval_file = "processed_poses_gt_" + args.eval_data_dict
     elif args.mode == "poses-pred":
+        processed_train_file = "processed_poses_det_" + args.train_data_dict
         processed_eval_file = "processed_poses_det_" + args.eval_data_dict
     else:
+        processed_train_file = "processed_" + args.train_data_dict
         processed_eval_file = "processed_" + args.eval_data_dict
     #processed_eval_file = "processed_" + args.eval_data_dict
 
@@ -420,7 +430,7 @@ def eval_statistics(rank):
         eval_data,
         collate_fn=clique_collate if args.mode == "base" else (clique_collate_pose if args.mode == "poses-gt" else clique_collate_det),
         batch_size=hyperparams["batch_size"],
-        shuffle=True,
+        shuffle=False,
         num_workers=args.num_workers,
     )
 
@@ -433,6 +443,7 @@ def eval_statistics(rank):
             eval_result[nt][sample] = dict()
 
     for num_samples in num_sample_list:
+        results_dict = {nt: {} for nt in env.node_type_list}
         total_ADE = {nt: 0 for nt in env.node_type_list}
         total_FDE = {
             nt: np.zeros(hyperparams["prediction_horizon"]) for nt in env.node_type_list
@@ -447,7 +458,7 @@ def eval_statistics(rank):
         with torch.no_grad():
             pbar = tqdm(eval_data_loader, ncols=80)
             # pbar = tqdm(eval_data_loader, ncols=80, unit_scale=dist.get_world_size(), disable=(rank > 0))
-            for batch in pbar:
+            for i, batch in enumerate(pbar):
                 (
                     eval_loss,
                     ADE,
@@ -458,6 +469,11 @@ def eval_statistics(rank):
                     nt_count,
                 ) = ScePT_model.eval_loss(batch, num_samples, criterion=0)
                 for nt in env.node_type_list:
+                    # print(f"Node Type: {nt}")
+                    # print(f"Average ADE: {ADE[nt]/ADE_count[nt]}")
+                    # print(f"Average FDE: {FDE[nt]/FDE_count[nt]}")
+                    # print(f"Average collision score: {coll_score[nt]/nt_count[nt]}")
+                    # results_dict[nt][i] = {"Average ADE": ADE[nt]/ADE_count[nt], "Average FDE": (FDE[nt]/FDE_count[nt]).tolist(), "Average collision score": (coll_score[nt]/nt_count[nt]).tolist()}
                     total_ADE[nt] += ADE[nt]
                     total_FDE[nt] += FDE[nt]
                     total_ADE_count[nt] += ADE_count[nt]
@@ -479,8 +495,11 @@ def eval_statistics(rank):
             print(f"Average FDE: {average_fde}")
             print(f"Average collision score: {average_coll}")
         
-    with open("eval_results_" + args.mode + "_" + args.trained_model_dir + ".json", "w") as f:
-        json.dump(eval_result, f)
+        # with open("eval_results_per_sample_" + str(num_samples) + "_" + args.mode + "_" + args.trained_model_dir + "_" + str(args.iter_num) + ".json", "w") as f:
+        #     json.dump(results_dict, f, indent=4)
+        
+    with open("eval_results_" + args.mode + "_" + args.trained_model_dir + "_" + str(args.iter_num) + ".json", "w") as f:
+        json.dump(eval_result, f, indent=4)
 
 
 def plot_snapshot(rank):

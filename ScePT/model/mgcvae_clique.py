@@ -174,14 +174,24 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                     ),
                 )
             else:
-                model = getattr(model_components, "PED_pre_encode_pose")
-                enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
-                self.add_submodule(
-                    'PEDESTRIAN' + "/node_pre_encoder_poses",
-                    model_if_absent=model(
-                        enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
-                    ),
-                )
+                if self.args.attention:
+                    model = getattr(model_components, "PED_pre_encode_pose_attention")
+                    enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
+                    self.add_submodule(
+                        'PEDESTRIAN' + "/node_pre_encoder_poses",
+                        model_if_absent=model(
+                            enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
+                        ),
+                    )
+                else:
+                    model = getattr(model_components, "PED_pre_encode_pose")
+                    enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
+                    self.add_submodule(
+                        'PEDESTRIAN' + "/node_pre_encoder_poses",
+                        model_if_absent=model(
+                            enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
+                        ),
+                    )
         for node_type in self.node_types:
             # if node_type == "PEDESTRIAN" and self.args.mode == "poses-gt":
             #     """
@@ -1030,7 +1040,8 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                 """
                 # Move keypoints then perform batch normalization
                 batch_state_history_pose_shape = batch_state_history_pose['PEDESTRIAN'].shape
-                moved_keypoints = batch_state_history_pose['PEDESTRIAN'][:, :, :2] - batch_state_history['PEDESTRIAN'][0, :, :2] 
+                moved_keypoints = batch_state_history_pose['PEDESTRIAN']
+                moved_keypoints[:, :, :2] = batch_state_history_pose['PEDESTRIAN'][:, :, :2] - batch_state_history['PEDESTRIAN'][0, :, :2] 
 
                 # Save indices where there are no pose information (i.e., all zeros)
                 zero_slices = torch.all(moved_keypoints == 0, dim=2)

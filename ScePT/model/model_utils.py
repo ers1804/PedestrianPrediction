@@ -419,6 +419,30 @@ class PED_pre_encode_pose_implicit(nn.Module):
 
     def forward(self, x):
         return self.FC(x)
+    
+
+class PED_pre_encode_pose_attention(nn.Module):
+    def __init__(self, enc_dim, device, num_heads=4, hidden_dim=None, use_lane_info=False):
+        super(PED_pre_encode_pose_attention, self).__init__()
+        self.device = device
+        if hidden_dim is None:
+            self.query = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
+            self.key = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
+            self.value = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
+        else:
+            self.query = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+            self.key = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+            self.value = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+        
+        #dims = enc_dim//num_heads
+        self.attention = nn.MultiheadAttention(embed_dim=enc_dim, num_heads=num_heads, dropout=0.1, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None, batch_first=False).to(device)
+
+    def forward(self, x):
+        query = self.query(x)
+        key = self.key(x)
+        value = self.value(x)
+        
+        return self.attention(query, key, value)[0]    
 
 
 class VEH_pre_encode(nn.Module):
