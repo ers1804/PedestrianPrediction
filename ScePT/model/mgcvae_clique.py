@@ -164,7 +164,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
         ############################
         # Add encoder for poses
         if self.use_poses:
-            if self.args.implicit:
+            if self.args.implicit and not self.args.attention:
                 model = getattr(model_components, "PED_pre_encode_pose_implicit")
                 enc_dim = self.hyperparams["node_pre_encode_net"]['PEDESTRIAN']["enc_dim"]
                 self.add_submodule(
@@ -180,7 +180,7 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
                     self.add_submodule(
                         'PEDESTRIAN' + "/node_pre_encoder_poses",
                         model_if_absent=model(
-                            enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"]
+                            enc_dim, self.device, hidden_dim=self.args.pose_hidden_dim, use_lane_info=self.hyperparams["use_lane_info"], implicit=self.args.implicit
                         ),
                     )
                 else:

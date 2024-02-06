@@ -498,7 +498,7 @@ def eval_statistics(rank):
         # with open("eval_results_per_sample_" + str(num_samples) + "_" + args.mode + "_" + args.trained_model_dir + "_" + str(args.iter_num) + ".json", "w") as f:
         #     json.dump(results_dict, f, indent=4)
         
-    with open("eval_results_" + args.mode + "_" + args.trained_model_dir + "_" + str(args.iter_num) + ".json", "w") as f:
+    with open("eval_results/eval_results_" + args.mode + "_" + args.trained_model_dir + "_" + str(args.iter_num) + ".json", "w") as f:
         json.dump(eval_result, f, indent=4)
 
 

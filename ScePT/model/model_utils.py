@@ -422,17 +422,17 @@ class PED_pre_encode_pose_implicit(nn.Module):
     
 
 class PED_pre_encode_pose_attention(nn.Module):
-    def __init__(self, enc_dim, device, num_heads=4, hidden_dim=None, use_lane_info=False):
+    def __init__(self, enc_dim, device, num_heads=4, hidden_dim=None, use_lane_info=False, implicit=False):
         super(PED_pre_encode_pose_attention, self).__init__()
         self.device = device
         if hidden_dim is None:
-            self.query = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
-            self.key = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
-            self.value = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, device=device)
+            self.query = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, device=device)
+            self.key = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, device=device)
+            self.value = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, device=device)
         else:
-            self.query = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
-            self.key = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
-            self.value = simplelinear(input_dim=4+(3*13), output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+            self.query = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+            self.key = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
+            self.value = simplelinear(input_dim=4+(3*13) if not implicit else 4+78, output_dim=enc_dim, hidden_dim=hidden_dim, device=device)
         
         #dims = enc_dim//num_heads
         self.attention = nn.MultiheadAttention(embed_dim=enc_dim, num_heads=num_heads, dropout=0.1, bias=True, add_bias_kv=False, add_zero_attn=False, kdim=None, vdim=None, batch_first=False).to(device)
