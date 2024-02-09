@@ -209,10 +209,13 @@ class MultimodalGenerativeCVAE_clique(nn.Module):
             #         ),
             #     )
             # else:
-            model = getattr(
-                model_components,
-                self.hyperparams["node_pre_encode_net"][node_type]["module"],
-            )
+            if not self.use_poses and self.args.attention and node_type == "PEDESTRIAN":
+                model = getattr(model_components, "PED_pre_encode_attention")
+            else:
+                model = getattr(
+                    model_components,
+                    self.hyperparams["node_pre_encode_net"][node_type]["module"],
+                )
             enc_dim = self.hyperparams["node_pre_encode_net"][node_type]["enc_dim"]
             if (
                 self.hyperparams["use_map_encoding"]
